@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#f5f7f5">
+  <meta name="theme-color" content="#F7F3ED">
   <title>Mahjong Ledger | Singapore Mahjong Money Tracker</title>
   <style>
     :root {
@@ -214,6 +214,260 @@
       html { scroll-behavior: auto; }
       .btn { transition: none; }
     }
+
+/* Mahjong Ledger — warm paper and terracotta theme */
+:root {
+  --bg: #F7F3ED;
+  --paper: #FFFCF8;
+  --ink: #302923;
+  --muted: #766F66;
+  --line: #E5DCD2;
+  --green: #B35C43;
+  --green-dark: #91432E;
+  --green-pale: #F8EBE4;
+  --red: #A94442;
+  --red-pale: #FBEEEB;
+  --cream: #F5EDE2;
+  --shadow: 0 1px 3px rgba(62,43,31,.028);
+}
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -.12px;
+}
+:focus-visible { outline: 2px solid #B35C43; outline-offset: 3px; }
+.shell { max-width: 1150px; }
+.sitebar {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 19px;
+  margin-bottom: 34px;
+}
+.brand { gap: 11px; }
+.brand-icon {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  background: #BD684C;
+  color: #FFF9F2;
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 23px;
+  font-weight: 600;
+}
+.brand-name {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -.6px;
+}
+.brand-sub { font-size: 10px; letter-spacing: 1.15px; color: #82776B; margin-top: 2px; }
+h1, h2, h3 { color: #302923; }
+h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(28px, 3.2vw, 39px);
+  letter-spacing: -1px;
+  font-weight: 600;
+}
+h2 { font-family: Georgia, "Times New Roman", serif; font-weight: 600; font-size: 22px; letter-spacing: -.4px; }
+h3 { font-weight: 700; }
+.eyebrow {
+  color: #A65B45;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 1.15px;
+}
+.subtitle { font-size: 13px; color: var(--muted); }
+.btn {
+  background: #FFFCF8;
+  border: 1px solid #DCCFC3;
+  border-radius: 8px;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 650;
+  box-shadow: none;
+  transition: background .14s, border-color .14s;
+}
+.btn:hover:not(:disabled) { background: #F5EBE1; border-color: #C9B6A6; }
+.btn:active:not(:disabled) { transform: none; background: #EEE2D7; }
+.btn.primary { background: #AE543B; border-color: #AE543B; color: #fffdfb; }
+.btn.primary:hover:not(:disabled) { background: #91432E; border-color: #91432E; }
+.btn.secondary { background: #FAEDE5; color: #934931; border-color: #E9C7B7; }
+.btn.secondary:hover:not(:disabled) { background: #F4DED3; border-color: #DFAE99; }
+.btn.link-btn { color: #91432E; }
+.btn.danger { color: #A94442; }
+.btn.wide { width: 100%; }
+.btn.big { border-radius: 9px; font-size: 14px; min-height: 51px; }
+.btn.small { border-radius: 7px; }
+.total-pill {
+  background: #F2EAE0;
+  border-color: #E4D6C8;
+  border-radius: 9px;
+  padding: 10px 14px;
+}
+.total-pill .total-label { color: #79675A; font-size: 10px; letter-spacing: .2px; }
+.total-pill strong { font-weight: 750; color: #40342B; }
+.total-pill.error { background: #FBEEEB; color: #A94442; }
+.player-grid { gap: 12px; margin-bottom: 20px; }
+.player {
+  background: #FFFCF8;
+  border: 1px solid #E5DCD2;
+  border-radius: 11px;
+  padding: 17px;
+  box-shadow: none;
+}
+.player.east {
+  border: 1.5px solid #C2785D;
+  background: #FFF6EF;
+}
+.player-name { font-size: 14px; font-weight: 700; }
+.wind-tag { background: #F0EAE3; color: #6D6257; border-radius: 5px; font-size: 10px; font-weight: 700; }
+.east .wind-tag { background: #F2DACA; color: #89462F; }
+.player-money { font-size: clamp(25px, 2.7vw, 32px); letter-spacing: -.9px; padding-top: 18px; padding-bottom: 8px; font-weight: 720; }
+.player-foot { font-size: 11px; }
+.delta { font-weight: 730; }
+.gain { color: #426B4C; }
+.loss { color: #A94442; }
+.main-grid { gap: 17px; }
+.panel {
+  background: #FFFCF8;
+  border-color: #E5DCD2;
+  border-radius: 12px;
+  box-shadow: none;
+}
+.panel-pad { padding: 23px; }
+.panel-head p { color: #7D746B; }
+.tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: transparent;
+  border-bottom: 1px solid #E5DCD2;
+  border-radius: 0;
+  padding: 0;
+  gap: 12px;
+  margin: 22px 0 20px;
+}
+.tab {
+  min-height: 46px;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: #766F66;
+  font-size: 13px;
+  font-weight: 600;
+}
+.tab.active {
+  color: #97482F;
+  border-color: #C16C4D;
+  background: transparent;
+  box-shadow: none;
+  font-weight: 730;
+}
+.tab:hover:not(.active) { color: #44352B; }
+.field { margin-bottom: 19px; }
+.field label, .field-title { font-weight: 700; font-size: 12px; }
+select, .text-input {
+  background: #FFFEFB;
+  color: #302923;
+  border: 1px solid #DCCFC3;
+  border-radius: 8px;
+  min-height: 46px;
+}
+select:hover, .text-input:hover { border-color: #B68F7C; }
+.choices { gap: 8px; }
+.choice {
+  border: 1px solid #DDD2C7;
+  border-radius: 8px;
+  background: #FFFEFB;
+  transition: border-color .1s, background .1s;
+}
+.choice:hover:not(:disabled) { border-color: #BB8C77; background: #FDF7F1; }
+.choice.selected {
+  background: #FAEBE2;
+  border: 1.5px solid #B96246;
+  box-shadow: none;
+  color: #8E412C;
+}
+.choice.taken { background: #F2EDE6; }
+.choice.taken small { color: #A94442; }
+.choice small { font-size: 10px; }
+.check-row {
+  background: #FAF5EE;
+  border-color: #E5DCD2;
+  border-radius: 9px;
+}
+.check-row input { accent-color: #A34C35; }
+.preview {
+  background: #F7EFE5;
+  border-color: #E8D9CB;
+  border-radius: 9px;
+  padding: 16px;
+}
+.preview strong.amount { color: #91432E; font-weight: 780; }
+.preview-list { color: #66574D; }
+.warning { background: #FFF6E7; border-color: #EBCDA7; border-radius: 8px; }
+.method { background: #FFFEFB; border-color: #DDD2C7; border-radius: 8px; }
+.method.selected { background: #FAEBE2; border-color: #B96246; }
+.round-meta { background: #FAEFE6; border: 1px solid #E9D2C3; border-radius: 9px; }
+.round-meta small { color: #79675A; }
+.round-meta .east-seal { background: #AE543B; border-radius: 7px; font-weight: 720; }
+.empty-copy, .empty-history { background: #FFFCF8; border-color: #E1D6CB; }
+.flower-mini { border-bottom-color: #EFE6DD; }
+.hand-help { background: #FAF5EF; }
+.rules-mini { background: #F4ECE1; border-color: #E6DACC; border-radius: 11px; }
+.rules-mini p { color: #6B5D52; }
+.history-section { margin-top: 30px; }
+.history-list { gap: 10px; }
+.history-hand { background: #FFFCF8; border-color: #E5DCD2; border-radius: 10px; }
+.badge { color: #756B61; background: #F0E9E2; border-radius: 5px; letter-spacing: .25px; }
+.badge.positive { color: #426B4C; background: #EAF0E8; }
+.badge.draw { color: #71665C; background: #F0E9E2; }
+.history-event { border-top-color: #EDE4DB; }
+.history-event-header .money { color: #426B4C; }
+.footer { margin-top: 26px; padding-top: 20px; border-top: 1px solid #E5DCD2; }
+.toast { background: #3D322A; color: #FFFCF8; border-radius: 8px; box-shadow: 0 9px 30px #34271F35; }
+.modal-backdrop { background: rgba(37,28,23,.62); }
+.modal { background: #FFFCF8; border-radius: 13px; }
+.banker-opt { background: #FFFEFB; border-color: #DDD2C7; border-radius: 8px; }
+.banker-opt.active { border-color: #B96246; background: #FAEBE2; }
+.setup-shell { max-width: 780px; margin: 42px auto 0; }
+.setup-intro { text-align: left; margin-bottom: 25px; }
+.setup-intro h1 { margin: 8px 0 12px; }
+.setup-card { background: #FFFCF8; border: 1px solid #E5DCD2; border-radius: 12px; padding: 28px; box-shadow: none; }
+.setup-grid { gap: 14px; }
+.setup-bottom { background: #F4ECE1; border-color: #E6DACC; color: #6B5D52; border-radius: 8px; }
+@media (max-width: 650px) {
+  .shell { padding: 18px 14px 65px; }
+  .sitebar { margin-bottom: 24px; padding-bottom: 15px; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .brand-icon { display: grid; width: 37px; height: 37px; }
+  .brand-name { font-size: 19px; }
+  .brand-sub { font-size: 9px; letter-spacing: .7px; }
+  .nav { width: 100%; gap: 7px; justify-content: flex-start; }
+  .nav .btn { font-size: 12px; min-height: 38px; padding: 8px 12px; }
+  .hero-row { gap: 10px; margin-bottom: 16px; }
+  .hero-row h1 { font-size: 28px; }
+  .total-pill { padding: 8px 9px; }
+  .total-pill .total-label { font-size: 9px; }
+  .total-pill strong { font-size: 17px; }
+  .player-grid { gap: 9px; }
+  .player { padding: 13px 12px; border-radius: 9px; }
+  .player-name { font-size: 13px; }
+  .wind-tag { font-size: 9px; padding: 3px 5px; }
+  .player-money { font-size: 27px; padding-top: 14px; }
+  .panel-pad { padding: 17px 16px; }
+  .tabs { gap: 6px; margin-top: 18px; }
+  .tab { font-size: 12px; }
+  .setup-shell { margin-top: 6px; }
+  .setup-card { padding: 19px; }
+  .setup-intro h1 { font-size: 31px; }
+}
+@media (max-width: 375px) {
+  .brand-icon { display: grid; }
+  .hero-row { flex-wrap: wrap; }
+  .fields-2 { grid-template-columns: 1fr; }
+  .player-money { font-size: 23px; }
+}
+
   </style>
 </head>
 <body>
@@ -350,9 +604,9 @@
   function setupView() {
     return `
       <main class="shell">
-        <header class="sitebar"><div class="brand"><div class="brand-icon" aria-hidden="true">東</div><div><div class="brand-name">Mahjong Ledger</div><div class="brand-sub">SINGAPORE HOUSE RULES</div></div></div><button type="button" class="btn" data-action="rules">View rules</button></header>
+        <header class="sitebar"><div class="brand"><div class="brand-icon" aria-hidden="true">東</div><div><div class="brand-name">Mahjong Ledger</div><div class="brand-sub">SINGAPORE MAHJONG</div></div></div><button type="button" class="btn" data-action="rules">View rules</button></header>
         <section class="setup-shell">
-          <div class="setup-intro"><div class="eyebrow">New game · Four players</div><h1>Keep score. Not calculations.</h1><p>Set up your seats once, then record a win or flower bonus in seconds.</p></div>
+          <div class="setup-intro"><div class="eyebrow">New game · Four players</div><h1>Set up the table</h1><p>Choose your seats and the first East banker. All balances begin at $30.00.</p></div>
           <div class="setup-card">
             <div class="panel-head"><div><h2>Who's playing?</h2><p>Enter names in banker rotation order.</p></div><span class="badge positive">$30.00 each</span></div>
             <div class="setup-grid">
@@ -481,7 +735,7 @@
   function historyPanel(model) {
     const completed = model.hands.slice().reverse();
     const shown = ui.allHistory ? completed : completed.slice(0, 5);
-    return `<section class="history-section"><div class="history-title"><div><div class="eyebrow">Audit trail</div><h2 style="margin-top:4px">Hand history</h2></div>${completed.length > 5?`<button class="btn small" type="button" data-action="all-history">${ui.allHistory?'Show latest 5':'View all '+completed.length}</button>`:''}</div>
+    return `<section class="history-section"><div class="history-title"><div><div class="eyebrow">Session</div><h2 style="margin-top:4px">Hand history</h2></div>${completed.length > 5?`<button class="btn small" type="button" data-action="all-history">${ui.allHistory?'Show latest 5':'View all '+completed.length}</button>`:''}</div>
       <div class="history-list">${completed.length===1 && !model.current.events.length ? '<div class="empty-history">Your payments and hand results will appear here as you play.</div>':shown.map(h => historyCard(h,h===model.current)).join('')}</div>
     </section>`;
   }
@@ -490,15 +744,15 @@
     normalizeDraft(model);
     const ok = model.total === STARTING_CENTS*4;
     return `<main class="shell">
-      <header class="sitebar"><div class="brand"><div class="brand-icon" aria-hidden="true">東</div><div><div class="brand-name">Mahjong Ledger</div><div class="brand-sub">SINGAPORE HOUSE RULES</div></div></div><nav class="nav" aria-label="Game controls"><button class="btn" type="button" data-action="undo" ${session.actions.length?'':'disabled'} title="Undo last action">↶ Undo</button><button class="btn" type="button" data-action="export">Export</button><button class="btn" type="button" data-action="more">⋯ More</button></nav></header>
-      <section class="hero-row"><div><div class="eyebrow">Live scoreboard · Hand ${model.current.number}</div><h1>Everyone's balance</h1><p class="subtitle">Money automatically moves between the four players.</p></div><div class="total-pill ${ok?'':'error'}"><div class="total-label">${ok?'✓ TOTAL BALANCED':'TOTAL MISMATCH'}</div><strong>${money(model.total)}</strong></div></section>
+      <header class="sitebar"><div class="brand"><div class="brand-icon" aria-hidden="true">東</div><div><div class="brand-name">Mahjong Ledger</div><div class="brand-sub">SINGAPORE MAHJONG</div></div></div><nav class="nav" aria-label="Game controls"><button class="btn" type="button" data-action="undo" ${session.actions.length?'':'disabled'} title="Undo last action">Undo</button><button class="btn" type="button" data-action="export">Export</button><button class="btn" type="button" data-action="more">Settings</button></nav></header>
+      <section class="hero-row"><div><div class="eyebrow">Hand ${model.current.number} · Session ledger</div><h1>Current balances</h1><p class="subtitle">All amounts in AUD · $30.00 starting balance per player</p></div><div class="total-pill ${ok?'':'error'}"><div class="total-label">${ok?'TABLE TOTAL':'TOTAL MISMATCH'}</div><strong>${money(model.total)}</strong></div></section>
       ${playerCards(model)}
       <div class="main-grid">
-        <section class="panel"><div class="panel-pad"><div class="panel-head"><div><div class="eyebrow">Quick entry</div><h2 style="margin-top:4px">Record an event</h2><p>One tap to calculate who pays whom.</p></div></div>
-          <div class="tabs" role="tablist" aria-label="Event type"><button class="tab ${ui.tab==='flower'?'active':''}" data-action="tab" data-value="flower" role="tab" aria-selected="${ui.tab==='flower'}">Flower bonus</button><button class="tab ${ui.tab==='win'?'active':''}" data-action="tab" data-value="win" role="tab" aria-selected="${ui.tab==='win'}">Win hand</button><button class="tab ${ui.tab==='gang'?'active':''}" data-action="tab" data-value="gang" role="tab" aria-selected="${ui.tab==='gang'}">Gang</button></div>
+        <section class="panel"><div class="panel-pad"><div class="panel-head"><div><div class="eyebrow">Current hand</div><h2 style="margin-top:4px">Record a result</h2><p>Add a flower pair, win, or declared Gang.</p></div></div>
+          <div class="tabs" role="tablist" aria-label="Event type"><button class="tab ${ui.tab==='flower'?'active':''}" data-action="tab" data-value="flower" role="tab" aria-selected="${ui.tab==='flower'}">Flowers</button><button class="tab ${ui.tab==='win'?'active':''}" data-action="tab" data-value="win" role="tab" aria-selected="${ui.tab==='win'}">Win</button><button class="tab ${ui.tab==='gang'?'active':''}" data-action="tab" data-value="gang" role="tab" aria-selected="${ui.tab==='gang'}">Gang</button></div>
           ${ui.tab==='flower' ? flowerForm(model) : ui.tab==='win' ? winForm(model) : gangForm(model)}
         </div></section>
-        <aside class="sidebar">${currentHandPanel(model)}<section class="rules-mini"><h3>At a glance</h3><p><b>Discard win:</b> only the discarder pays the full Tai amount.</p><p><b>Self-draw:</b> each of the other three players pays half the Tai amount.</p><p><b>Own flowers:</b> all three opponents pay $0.20 each; $0.40 if both were in the first dealt tiles.</p><p><b>Other player's flowers:</b> that flower's owner pays $0.20; doubled to $0.40 if initially dealt.</p><p><b>Draw + non-East Gang:</b> banker passes to the next seat. No Gang payment is assumed.</p><button class="btn small" style="margin-top:12px" type="button" data-action="rules">Full rules</button></section></aside>
+        <aside class="sidebar">${currentHandPanel(model)}<section class="rules-mini"><h3>Payment rules</h3><p><b>Discard win:</b> only the discarder pays the full Tai amount.</p><p><b>Self-draw:</b> each of the other three players pays half the Tai amount.</p><p><b>Own flowers:</b> all three opponents pay $0.20 each; $0.40 if both were in the first dealt tiles.</p><p><b>Other player's flowers:</b> that flower's owner pays $0.20; doubled to $0.40 if initially dealt.</p><p><b>Draw + non-East Gang:</b> banker passes to the next seat. No Gang payment is assumed.</p><button class="btn small" style="margin-top:12px" type="button" data-action="rules">Full rules</button></section></aside>
       </div>
       ${historyPanel(model)}
       <footer class="footer"><span>Fixed starting funds: $30.00 per player · Maximum 5 Tai self-draw: $19.20 (before flowers).</span><span>Saved on this device only. No sign-in or user IDs.</span></footer>
