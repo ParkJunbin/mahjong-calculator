@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f7f5">
+  <title>Mahjong Ledger | Singapore Mahjong Money Tracker</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7f5;
+      --paper: #fff;
+      --ink: #182a27;
+      --muted: #687a75;
+      --line: #dce7e1;
+      --green: #176a52;
+      --green-dark: #104c3b;
+      --green-pale: #e9f5ee;
+      --red: #b3454c;
+      --red-pale: #fff0ef;
+      --cream: #f9f7ee;
+      --shadow: 0 7px 32px rgba(19, 55, 40, .045);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; line-height: 1.42; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .45; }
+    :focus-visible { outline: 3px solid #54ad91; outline-offset: 3px; }
+    .shell { max-width: 1200px; padding: 25px 24px 80px; margin: 0 auto; }
+    .sitebar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 29px; }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand-icon { height: 45px; width: 45px; border: 2px solid #134c3c; background: #fff; color: #164c3b; display: grid; place-items: center; font-size: 24px; font-weight: 750; border-radius: 12px; box-shadow: 3px 3px 0 #c8e8d6; flex: none; }
+    .brand-name { font-size: 21px; font-weight: 800; letter-spacing: -.8px; line-height: 1.1; }
+    .brand-sub { color: var(--muted); font-size: 12px; margin-top: 4px; letter-spacing: .3px; }
+    .nav { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+    .btn { border: 1px solid var(--line); background: #fff; color: var(--ink); border-radius: 11px; padding: 10px 14px; min-height: 43px; font-size: 13px; font-weight: 700; transition: border .15s, background .15s, transform .15s; }
+    .btn:hover:not(:disabled) { background: #f4faf6; border-color: #a7c8ba; }
+    .btn:active:not(:disabled) { transform: translateY(1px); }
+    .btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
+    .btn.primary:hover:not(:disabled) { background: var(--green-dark); }
+    .btn.secondary { background: var(--green-pale); color: var(--green-dark); border-color: #cce6d6; }
+    .btn.danger { color: var(--red); }
+    .btn.wide { width: 100%; }
+    .btn.big { padding: 14px 17px; font-size: 15px; min-height: 52px; }
+    .btn.small { min-height: 32px; border-radius: 9px; padding: 6px 10px; font-size: 12px; }
+    .btn.link-btn { border: 0; background: transparent; padding-inline: 5px; color: var(--green); }
+    .muted { color: var(--muted); }
+    .eyebrow { color: var(--green); font-size: 11px; font-weight: 850; text-transform: uppercase; letter-spacing: 1.2px; }
+    .hero-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 15px; margin-bottom: 19px; }
+    h1,h2,h3,p { margin: 0; }
+    h1 { font-size: clamp(24px, 3vw, 34px); letter-spacing: -1.2px; line-height: 1.22; margin-top: 4px; }
+    h2 { font-size: 19px; letter-spacing: -.45px; }
+    h3 { font-size: 15px; letter-spacing: -.15px; }
+    .subtitle { color: var(--muted); margin-top: 8px; font-size: 13px; }
+    .total-pill { border: 1px solid #cce6d6; background: #e9f6ed; border-radius: 12px; padding: 11px 15px; text-align: right; white-space: nowrap; }
+    .total-pill .total-label { font-size: 11px; color: #476e5c; font-weight: 750; }
+    .total-pill strong { font-size: 20px; letter-spacing: -.4px; font-variant-numeric: tabular-nums; }
+    .total-pill.error { border-color: #efb7bb; background: var(--red-pale); color: var(--red); }
+    .player-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 21px; }
+    .player { background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow); border-radius: 17px; padding: 17px 17px 15px; min-width: 0; }
+    .player.east { border: 1.5px solid #68a990; background: linear-gradient(150deg, #eff9f2 0%, #fff 71%); }
+    .player-top { display: flex; align-items: center; justify-content: space-between; gap: 5px; }
+    .player-name { font-weight: 760; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+    .wind-tag { border-radius: 7px; padding: 4px 7px; background: #edf0ec; color: #63736d; font-size: 10px; font-weight: 800; white-space: nowrap; }
+    .east .wind-tag { background: #d8efdf; color: #175a41; }
+    .player-money { font-size: clamp(23px, 2.7vw, 34px); font-weight: 820; letter-spacing: -.8px; padding-top: 19px; padding-bottom: 7px; font-variant-numeric: tabular-nums; }
+    .player-foot { display: flex; align-items: center; justify-content: space-between; gap: 5px; font-size: 12px; }
+    .delta { font-weight: 800; font-variant-numeric: tabular-nums; }
+    .gain { color: var(--green); }
+    .loss { color: var(--red); }
+    .neutral { color: var(--muted); }
+    .main-grid { display: grid; grid-template-columns: minmax(0, 1.62fr) minmax(295px, .9fr); gap: 18px; align-items: start; }
+    .panel { background: #fff; border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+    .panel-pad { padding: 22px; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .panel-head p { color: var(--muted); font-size: 12px; margin-top: 5px; }
+    .tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: #eef3ef; border-radius: 12px; padding: 4px; margin: 22px 0 20px; gap: 4px; }
+    .tab { border: 0; background: transparent; color: var(--muted); min-height: 42px; font-size: 12px; font-weight: 740; border-radius: 9px; }
+    .tab.active { background: #fff; color: var(--green-dark); box-shadow: 0 2px 8px rgba(23, 66, 42, .09); }
+    .field { margin-bottom: 20px; }
+    .field label, .field-title { display: block; font-size: 12px; font-weight: 800; margin-bottom: 9px; }
+    select, .text-input { width: 100%; border: 1px solid #ceded5; background: #fff; border-radius: 10px; color: var(--ink); padding: 11px 12px; min-height: 46px; font-size: 14px; }
+    select:hover, .text-input:hover { border-color: #9bbfaf; }
+    .fields-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+    .choices { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+    .choices.tai-choices { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+    .tai-choices .choice b { font-size: 15px; white-space: nowrap; }
+    .choice { min-height: 63px; border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 8px 4px; text-align: center; color: var(--ink); }
+    .choice b { display: block; font-size: 17px; }
+    .choice small { display: block; font-size: 10px; margin-top: 3px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 3px; }
+    .choice.selected { border: 1.5px solid var(--green); color: var(--green-dark); background: #ebf7ef; box-shadow: inset 0 0 0 1px #b8dfc9; }
+    .choice.taken { background: #f7f8f7; }
+    .choice.taken small { color: var(--red); }
+    .check-row { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; border: 1px solid var(--line); background: #fafcf9; padding: 13px; border-radius: 11px; margin: 0 0 18px; }
+    .check-row input { appearance: auto; width: 18px; height: 18px; flex: none; accent-color: var(--green); margin: 1px 0 0; }
+    .check-row strong { font-size: 13px; display: block; margin-bottom: 3px; }
+    .check-row small { font-size: 11px; color: var(--muted); display: block; line-height: 1.5; }
+    .preview { background: #f2f8f4; border: 1px solid #d9ebdf; padding: 15px; border-radius: 12px; margin: 0 0 17px; }
+    .preview-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .preview span.micro, .micro { font-size: 11px; color: var(--muted); font-weight: 720; }
+    .preview strong.amount { font-size: 24px; font-weight: 850; color: var(--green-dark); font-variant-numeric: tabular-nums; }
+    .preview-list { display: flex; gap: 5px; flex-wrap: wrap; color: #425d4e; font-size: 12px; margin-top: 7px; }
+    .note { font-size: 11px; color: var(--muted); line-height: 1.5; }
+    .warning { background: #fff7e9; border: 1px solid #f2d9a6; border-radius: 11px; padding: 12px; color: #755a27; font-size: 12px; margin-bottom: 16px; }
+    .method-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .method { min-height: 73px; padding: 12px; border-radius: 11px; border: 1px solid var(--line); background: #fff; text-align: left; }
+    .method strong { font-size: 13px; display: block; }
+    .method small { font-size: 11px; color: var(--muted); display: block; margin-top: 4px; }
+    .method.selected { background: var(--green-pale); border: 1.5px solid var(--green); }
+    .sidebar { display: grid; gap: 17px; }
+    .round-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; border: 1px solid #cfe8d9; padding: 13px; background: #edf8f0; border-radius: 12px; }
+    .round-meta small { color: #628071; display: block; font-size: 11px; margin-bottom: 3px; }
+    .round-meta strong { font-size: 18px; letter-spacing: -.4px; }
+    .round-meta .east-seal { width: 43px; height: 43px; border-radius: 11px; background: var(--green); color: #fff; display: grid; place-items: center; font-size: 20px; font-weight: 850; flex: none; }
+    .current-flowers { margin-top: 16px; }
+    .empty-copy { border: 1px dashed #d6e2db; color: var(--muted); font-size: 12px; padding: 14px; margin-top: 9px; border-radius: 10px; background: #fcfdfc; }
+    .flower-mini { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 0; border-bottom: 1px solid #eef1ef; font-size: 12px; }
+    .flower-mini b { font-weight: 750; }
+    .divider { height: 1px; background: var(--line); margin: 18px 0; }
+    .round-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+    .round-actions .btn { flex: 1 1 auto; }
+    .hand-help { padding: 15px 19px; background: #fafbf9; border-top: 1px solid var(--line); font-size: 11px; color: var(--muted); line-height: 1.6; }
+    .rules-mini { background: var(--cream); border: 1px solid #eae5cf; border-radius: 15px; padding: 17px; }
+    .rules-mini h3 { margin-bottom: 11px; }
+    .rules-mini p { font-size: 12px; margin-top: 7px; color: #5e675d; line-height: 1.6; }
+    .history-section { margin-top: 24px; }
+    .history-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 13px; }
+    .history-list { display: grid; gap: 11px; }
+    .history-hand { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 15px 17px; }
+    .history-hand-header { display: flex; align-items: center; justify-content: space-between; gap: 9px; margin-bottom: 7px; }
+    .history-hand-title { font-size: 13px; font-weight: 800; }
+    .badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; padding: 4px 8px; font-size: 10px; font-weight: 800; background: #f1f3f1; color: var(--muted); }
+    .badge.positive { color: var(--green-dark); background: #e8f6ed; }
+    .badge.draw { background: #f1f3f1; }
+    .history-event { padding: 10px 0; border-top: 1px solid #eff3ef; }
+    .history-event-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; }
+    .history-event-header strong { font-weight: 740; }
+    .history-event-header .money { color: var(--green); font-weight: 810; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .history-transfer { font-size: 11px; color: var(--muted); line-height: 1.55; margin-top: 5px; overflow-wrap: anywhere; }
+    .empty-history { padding: 25px; text-align: center; background: #fff; border: 1px dashed #d4e2d9; border-radius: 13px; font-size: 13px; color: var(--muted); }
+    .footer { margin-top: 27px; color: var(--muted); font-size: 11px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: #163e32; color: #fff; border-radius: 10px; padding: 11px 17px; z-index: 100; font-size: 13px; font-weight: 700; max-width: calc(100vw - 32px); box-shadow: 0 8px 24px #183a3040; text-align: center; }
+    .modal-backdrop { position: fixed; inset: 0; z-index: 50; background: #10251e95; display: grid; place-items: center; padding: 20px; }
+    .modal { background: #fff; border-radius: 19px; width: min(100%, 510px); box-shadow: 0 20px 100px #031a1740; max-height: min(85vh, 790px); overflow-y: auto; }
+    .modal-head { padding: 22px 24px 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+    .modal-body { padding: 10px 24px 24px; }
+    .modal-body p { color: var(--muted); font-size: 13px; margin-bottom: 15px; line-height: 1.6; }
+    .modal-close { background: transparent; border: 0; font-size: 25px; color: var(--muted); line-height: 1; padding: 0 3px; }
+    .banker-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+    .banker-opt { display: flex; flex-direction: column; gap: 5px; align-items: flex-start; border-radius: 11px; padding: 14px; border: 1px solid var(--line); background: #fff; text-align: left; min-height: 78px; }
+    .banker-opt strong { font-size: 15px; }
+    .banker-opt small { color: var(--muted); }
+    .banker-opt.active { border: 2px solid var(--green); background: var(--green-pale); padding: 13px; }
+    .modal-controls { display: flex; gap: 9px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
+    .setup-shell { max-width: 850px; margin: 40px auto 0; }
+    .setup-intro { text-align: center; margin-bottom: 24px; }
+    .setup-intro h1 { margin: 10px auto; }
+    .setup-intro p { color: var(--muted); font-size: 14px; }
+    .setup-card { background: white; border: 1px solid var(--line); border-radius: 21px; padding: 27px; box-shadow: var(--shadow); }
+    .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; margin-top: 17px; }
+    .setup-field { display: flex; flex-direction: column; gap: 7px; }
+    .setup-field label { font-size: 12px; font-weight: 800; }
+    .seat-hint { color: var(--muted); font-size: 12px; line-height: 1.7; margin-top: 7px; }
+    .setup-bottom { background: #f1f7f2; border: 1px solid #d9e7dd; padding: 14px; border-radius: 12px; margin-top: 22px; color: #416654; font-size: 12px; line-height: 1.65; }
+    .setup-start { margin-top: 20px; }
+    .rules-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 10px 0 20px; }
+    .rules-table td,.rules-table th { padding: 9px 6px; border-bottom: 1px solid var(--line); text-align: left; }
+    .rules-table th { font-size: 11px; color: var(--muted); }
+    .rules-table td:not(:first-child),.rules-table th:not(:first-child) { text-align: right; }
+    @media (max-width: 930px) {
+      .main-grid { grid-template-columns: minmax(0, 1fr); }
+      .sidebar { grid-template-columns: 1fr 1fr; align-items: start; }
+      .player-grid { gap: 10px; }
+    }
+    @media (max-width: 650px) {
+      .shell { padding: 17px 13px 70px; }
+      .sitebar { align-items: flex-start; margin-bottom: 24px; gap: 8px; }
+      .brand-name { font-size: 18px; }
+      .brand-sub { font-size: 10px; }
+      .brand-icon { width: 39px; height: 39px; }
+      .nav { gap: 4px; }
+      .nav .btn { min-height: 34px; padding: 7px 9px; font-size: 11px; }
+      .hero-row { align-items: center; }
+      .hero-row h1 { font-size: 25px; }
+      .hero-row .subtitle { font-size: 11px; }
+      .total-pill { padding: 8px 10px; }
+      .total-pill strong { font-size: 16px; }
+      .total-pill .total-label { font-size: 10px; }
+      .player-grid { grid-template-columns: 1fr 1fr; gap: 9px; }
+      .player { padding: 13px 12px; border-radius: 14px; }
+      .player-name { font-size: 13px; }
+      .wind-tag { font-size: 9px; padding: 3px 5px; }
+      .player-money { padding-top: 14px; font-size: 26px; }
+      .player-foot { font-size: 11px; }
+      .panel-pad { padding: 17px; }
+      .sidebar { grid-template-columns: 1fr; }
+      .setup-shell { margin-top: 5px; }
+      .setup-card { padding: 18px; }
+      .setup-grid { gap: 10px; }
+      .setup-intro h1 { font-size: 27px; }
+      .setup-intro p { font-size: 12px; }
+    }
+    @media (max-width: 375px) {
+      .brand-icon { display: none; }
+      .hero-row { flex-wrap: wrap; }
+      .fields-2 { grid-template-columns: 1fr; }
+      .player-money { font-size: 23px; }
+      .choices { gap: 5px; }
+      .choice small { font-size: 9px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .btn { transition: none; }
+    }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+(function () {
+  const STORAGE_KEY = 'sg-mahjong-ledger.v1';
+  const STARTING_CENTS = 3000;
+  const BASE_CENTS = [0, 80, 160, 320, 640, 1280];
+  const WINDS = ['East', 'South', 'West', 'North'];
+  const WIND_CHARS = ['東', '南', '西', '北'];
+  const defaultNames = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
+  const root = document.getElementById('app');
+  let session = loadSession();
+  let ui = { tab: 'flower', modal: null, allHistory: false, toast: '', draft: { collector: 0, flower: 1, initial: false, winner: 0, tai: 3, method: 'self', discarder: 1, gangPlayer: 0 } };
+  let toastTimeout = null;
+
+  function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'}[c]));
+  }
+  function money(cents) { return '$' + (cents / 100).toFixed(2); }
+  function signed(cents) { return (cents > 0 ? '+' : cents < 0 ? '-' : '') + money(Math.abs(cents)); }
+  function safeName(index) { return escapeHTML(session.players[index]); }
+  function name(index) { return session.players[index]; }
+  function fromEast(east, flowerNo) { return (east + flowerNo - 1) % 4; }
+  function windOfPlayer(east, player) { return (player - east + 4) % 4; }
+
+  function flowerTransfers(east, collector, flower, initial) {
+    const owner = fromEast(east, flower);
+    const perPayer = initial ? 40 : 20;
+    if (owner === collector) {
+      return [0, 1, 2, 3].filter(p => p !== collector).map(from => ({ from, to: collector, cents: perPayer }));
+    }
+    return [{ from: owner, to: collector, cents: perPayer }];
+  }
+  function winningTransfers(winner, tai, method, discarder) {
+    const amount = BASE_CENTS[tai];
+    if (method === 'self') {
+      return [0, 1, 2, 3].filter(p => p !== winner).map(from => ({ from, to: winner, cents: amount / 2 }));
+    }
+    return [{ from: discarder, to: winner, cents: amount }];
+  }
+  function addTransfers(balances, transfers) {
+    transfers.forEach(t => { balances[t.from] -= t.cents; balances[t.to] += t.cents; });
+  }
+  function newHand(number, east) { return { number, east, flowers: [], gangs: [], events: [], outcome: null }; }
+  function derive(s) {
+    const balances = [STARTING_CENTS, STARTING_CENTS, STARTING_CENTS, STARTING_CENTS];
+    const hands = [];
+    let east = s.initialEast;
+    let current = newHand(1, east);
+    for (let ai = 0; ai < s.actions.length; ai++) {
+      const action = s.actions[ai];
+      if (action.type === 'setEast') {
+        east = action.east;
+        current.east = east;
+        continue;
+      }
+      if (action.type === 'flower') {
+        const transfers = flowerTransfers(east, action.collector, action.flower, action.initial);
+        addTransfers(balances, transfers);
+        const event = { type: 'flower', actionIndex: ai, collector: action.collector, flower: action.flower, initial: action.initial, transfers };
+        current.events.push(event);
+        current.flowers.push(action.flower);
+        continue;
+      }
+      if (action.type === 'gang') {
+        // A declared Gang affects East rotation ONLY if this hand ultimately draws.
+        // No automatic Gang payment has been specified in these house rules.
+        const event = { type: 'gang', actionIndex: ai, player: action.player, transfers: [] };
+        current.events.push(event);
+        current.gangs.push(action.player);
+        continue;
+      }
+      if (action.type === 'win') {
+        const transfers = winningTransfers(action.winner, action.tai, action.method, action.discarder);
+        addTransfers(balances, transfers);
+        const event = { type: 'win', actionIndex: ai, winner: action.winner, tai: action.tai, method: action.method, discarder: action.discarder, transfers };
+        current.events.push(event);
+        current.outcome = event;
+        hands.push(current);
+        if (action.winner !== east) east = (east + 1) % 4;
+        current = newHand(current.number + 1, east);
+        continue;
+      }
+      if (action.type === 'draw') {
+        // Allow a Gang to be entered while marking a draw, without a separate tap.
+        if (Number.isInteger(action.extraGang) && action.extraGang >= 0 && action.extraGang < 4) {
+          current.gangs.push(action.extraGang);
+          current.events.push({ type: 'gang', actionIndex: ai, player: action.extraGang, quickEntry: true, transfers: [] });
+        }
+        const nonEastGang = current.gangs.some(player => player !== east);
+        const nextEast = nonEastGang ? (east + 1) % 4 : east;
+        current.outcome = { type: 'draw', actionIndex: ai, nonEastGang, nextEast, transfers: [] };
+        hands.push(current);
+        east = nextEast;
+        current = newHand(current.number + 1, east);
+      }
+    }
+    hands.push(current);
+    return { balances, hands, current, east, total: balances.reduce((a,b) => a+b, 0) };
+  }
+  function loadSession() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.players) || parsed.players.length !== 4 || !parsed.players.every(x => typeof x === 'string') || !Number.isInteger(parsed.initialEast) || parsed.initialEast < 0 || parsed.initialEast > 3 || !Array.isArray(parsed.actions)) return null;
+      return parsed;
+    } catch (err) { return null; }
+  }
+  function persist() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(session)); }
+    catch (err) { showToast('Your browser could not save locally. Export a CSV as backup.'); }
+  }
+  function showToast(msg) {
+    ui.toast = msg;
+    let el = document.getElementById('toast');
+    if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+    el.textContent = msg;
+    if (toastTimeout) clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => { if (el.isConnected) el.remove(); ui.toast = ''; }, 2700);
+  }
+  function addAction(action, feedback) {
+    session.actions.push({ ...action, timestamp: new Date().toISOString() });
+    persist();
+    render();
+    if (feedback) showToast(feedback);
+  }
+  function playerOptions(selected, excluding = null) {
+    return session.players.map((n,i) => i === excluding ? '' : `<option value="${i}" ${selected === i ? 'selected' : ''}>${escapeHTML(n)}</option>`).join('');
+  }
+  function setupView() {
+    return `
+      <main class="shell">
+        <header class="sitebar"><div class="brand"><div class="brand-icon" aria-hidden="true">東</div><div><div class="brand-name">Mahjong Ledger</div><div class="brand-sub">SINGAPORE HOUSE RULES</div></div></div><button type="button" class="btn" data-action="rules">View rules</button></header>
+        <section class="setup-shell">
+          <div class="setup-intro"><div class="eyebrow">New game · Four players</div><h1>Keep score. Not calculations.</h1><p>Set up your seats once, then record a win or flower bonus in seconds.</p></div>
+          <div class="setup-card">
+            <div class="panel-head"><div><h2>Who's playing?</h2><p>Enter names in banker rotation order.</p></div><span class="badge positive">$30.00 each</span></div>
+            <div class="setup-grid">
+              ${defaultNames.map((n,i) => `<div class="setup-field"><label for="setup-player-${i}">Seat ${i+1}</label><input class="text-input" id="setup-player-${i}" maxlength="28" value="${escapeHTML(n)}" autocomplete="off" aria-label="Seat ${i+1} name"></div>`).join('')}
+            </div>
+            <p class="seat-hint">Seat order is the banker rotation order: Seat 1 → Seat 2 → Seat 3 → Seat 4 → Seat 1. Flower numbers follow the current East banker: East = 1, South = 2, West = 3, North = 4.</p>
+            <div class="divider"></div>
+            <div class="field-title">Who starts as banker (東 / East)?</div>
+            <div class="banker-options" id="setup-east-options">${defaultNames.map((n,i) => `<label class="banker-opt ${i===0 ? 'active' : ''}" data-setup-east-label="${i}"><span><input type="radio" name="setup-east" value="${i}" ${i===0 ? 'checked' : ''}> &nbsp;Seat ${i+1}</span><strong data-setup-name-preview="${i}">${escapeHTML(n)}</strong></label>`).join('')}</div>
+            <div class="setup-bottom"><strong>Fixed game funds:</strong> Everyone begins with $30.00, for a total of $120.00. Balances, flower payments, wins and banker changes are saved in this browser.</div>
+            <button type="button" class="btn primary big wide setup-start" data-action="start">Start session &rarr;</button>
+          </div>
+        </section>
+      </main>`;
+  }
+  function playerCards(model) {
+    return `<div class="player-grid">${session.players.map((player,i) => {
+      const w = windOfPlayer(model.east, i);
+      const net = model.balances[i] - STARTING_CENTS;
+      return `<article class="player ${w===0 ? 'east':''}" aria-label="${escapeHTML(player)}, ${WINDS[w]}, balance ${money(model.balances[i])}">
+        <div class="player-top"><span class="player-name" title="${escapeHTML(player)}">${escapeHTML(player)}</span><span class="wind-tag">${WIND_CHARS[w]} ${WINDS[w]} · ${w+1}</span></div>
+        <div class="player-money">${money(model.balances[i])}</div>
+        <div class="player-foot"><span class="muted">From $30.00</span><span class="delta ${net>0?'gain':net<0?'loss':'neutral'}">${signed(net)}</span></div>
+      </article>`;
+    }).join('')}</div>`;
+  }
+  function flowerForm(model) {
+    const d = ui.draft;
+    const taken = model.current.flowers;
+    const already = taken.includes(d.flower);
+    const owner = fromEast(model.east, d.flower);
+    const own = owner === d.collector;
+    const transfers = flowerTransfers(model.east, d.collector, d.flower, d.initial);
+    const received = transfers.reduce((sum,x) => sum + x.cents, 0);
+    const full = taken.length >= 4;
+    return `
+      <div class="field"><label for="flower-collector">Who collected both flowers?</label><select id="flower-collector" data-field="collector">${playerOptions(d.collector)}</select></div>
+      <div class="field"><div class="field-title">Which flower number was collected?</div><div class="choices" role="group" aria-label="Flower number">
+        ${[1,2,3,4].map(n => {
+          const p = fromEast(model.east, n);
+          return `<button type="button" class="choice ${d.flower===n?'selected':''} ${taken.includes(n)?'taken':''}" data-action="flower-no" data-value="${n}" aria-pressed="${d.flower===n}"><b>${n}</b><small>${taken.includes(n)?'Recorded':escapeHTML(name(p))}</small></button>`;
+        }).join('')}
+      </div><p class="note" style="margin-top:8px">Flower 1 = East, 2 = South, 3 = West, 4 = North. Ownership follows the current banker.</p></div>
+      <label class="check-row" for="flower-initial"><input id="flower-initial" type="checkbox" data-field="initial" ${d.initial?'checked':''}><span><strong>Both were in the original dealt tiles (2×)</strong><small>Check only if both matching flowers were among the first tiles dealt. Flower-replacement draws do not count.</small></span></label>
+      ${already ? `<div class="warning">Flower pair #${d.flower} has already been paid this hand. Choose a different number.</div>` : ''}
+      <div class="preview"><div class="preview-top"><span class="micro">${own?'OWN FLOWER PAIR':'ANOTHER PLAYER\'S FLOWER PAIR'}</span><strong class="amount">+${money(received)}</strong></div><div class="preview-list">${own ? `Each of the other 3 players pays ${money(d.initial?40:20)} to <b>${safeName(d.collector)}</b>.` : `<b>${safeName(owner)}</b> pays <b>${safeName(d.collector)}</b> ${money(received)}.`}</div></div>
+      <button type="button" class="btn primary wide big" data-action="add-flower" ${already||full?'disabled':''}>${full ? 'All four flower pairs recorded' : 'Record flower payment'} &rarr;</button>`;
+  }
+  function winForm(model) {
+    const d = ui.draft;
+    const transfers = winningTransfers(d.winner, d.tai, d.method, d.discarder);
+    const received = transfers.reduce((sum,x) => sum+x.cents, 0);
+    const nextEast = d.winner === model.east ? model.east : (model.east + 1) % 4;
+    return `
+      <div class="field"><label for="winner">Who won the hand?</label><select id="winner" data-field="winner">${playerOptions(d.winner)}</select></div>
+      <div class="field"><div class="field-title">Winning Tai</div><div class="choices tai-choices" role="group" aria-label="Tai">
+        ${[1,2,3,4,5].map(t => `<button type="button" class="choice ${d.tai===t?'selected':''}" data-action="choose-tai" data-value="${t}" aria-pressed="${d.tai===t}"><b>${t} <span style="font-size:10px">Tai</span></b><small>${money(BASE_CENTS[t])}</small></button>`).join('')}
+      </div></div>
+      <div class="field"><div class="field-title">How was the hand won?</div><div class="method-choices"><button type="button" class="method ${d.method==='self'?'selected':''}" data-action="method" data-value="self" aria-pressed="${d.method==='self'}"><strong>Self-draw</strong><small>Each opponent pays half</small></button><button type="button" class="method ${d.method==='discard'?'selected':''}" data-action="method" data-value="discard" aria-pressed="${d.method==='discard'}"><strong>Discard win</strong><small>Only discarder pays full</small></button></div></div>
+      ${d.method === 'discard'?`<div class="field"><label for="discarder">Who discarded the winning tile?</label><select id="discarder" data-field="discarder">${playerOptions(d.discarder,d.winner)}</select></div>`:''}
+      <div class="preview"><div class="preview-top"><span class="micro">${d.method === 'self'?'SELF-DRAW TOTAL':'DISCARD WIN TOTAL'}</span><strong class="amount">+${money(received)}</strong></div><div class="preview-list">${d.method === 'self'?`Each other player pays ${money(BASE_CENTS[d.tai]/2)} to <b>${safeName(d.winner)}</b>.`:`<b>${safeName(d.discarder)}</b> pays <b>${safeName(d.winner)}</b> ${money(BASE_CENTS[d.tai])}.`}</div></div>
+      <p class="note" style="margin-bottom:12px">${d.winner===model.east?`East banker <b>${safeName(model.east)}</b> wins and stays East.`:`After this win, East passes to <b>${safeName(nextEast)}</b> (the next seat).`}</p>
+      <button type="button" class="btn primary wide big" data-action="record-win">Record win & finish hand &rarr;</button>`;
+  }
+  function gangForm(model) {
+    const d = ui.draft;
+    const changesOnDraw = d.gangPlayer !== model.east || model.current.gangs.some(p => p !== model.east);
+    const nextEast = (model.east + 1) % 4;
+    return `
+      <div class="field"><label for="gang-player">Who declared a Gang (four identical tiles)?</label><select id="gang-player" data-field="gangPlayer">${playerOptions(d.gangPlayer)}</select></div>
+      <div class="preview">
+        <div class="preview-top"><span class="micro">DECLARED GANG · NO MONEY TRANSFER</span><strong class="amount">$0.00</strong></div>
+        <div class="preview-list">${changesOnDraw ? `If this hand ends in a draw, East will pass from <b>${safeName(model.east)}</b> to <b>${safeName(nextEast)}</b>.` : `If this hand ends in a draw, <b>${safeName(model.east)}</b> stays East (unless another player declares a Gang).`}</div>
+      </div>
+      <p class="note" style="margin-bottom:13px">Only a declared Gang by a non-East player moves the banker on a <b>drawn</b> hand. If a player wins, normal banker rotation rules apply. A Gang has no payment in this calculator.</p>
+      <button type="button" class="btn primary wide big" data-action="record-gang">Record declared Gang &rarr;</button>`;
+  }
+  function currentHandPanel(model) {
+    const h = model.current;
+    const flowerEvents = h.events.filter(e => e.type === 'flower');
+    const gangs = h.events.filter(e => e.type === 'gang');
+    const nonEastGang = h.gangs.some(p => p !== model.east);
+    return `<section class="panel"><div class="panel-pad">
+      <div class="panel-head"><div><div class="eyebrow">Live hand</div><h2 style="margin-top:4px">Hand ${String(h.number).padStart(2,'0')}</h2></div><span class="badge positive">IN PROGRESS</span></div>
+      <div class="round-meta"><div><small>CURRENT BANKER · 東 / EAST</small><strong>${safeName(model.east)}</strong></div><div class="east-seal" aria-label="East">東</div></div>
+      <div style="margin-top:11px"><button type="button" class="btn secondary wide" data-action="change-east" ${h.events.length?'disabled title="Finish this hand before changing East"':''}>Choose / change East banker</button></div>
+      ${h.events.length?'<p class="note" style="margin-top:7px">Banker is locked once an event is recorded for this hand. Undo to correct it.</p>':''}
+      <div class="current-flowers"><div class="panel-head"><h3>Flowers recorded</h3><span class="badge">${h.flowers.length} / 4 pairs</span></div>
+        ${flowerEvents.length ? flowerEvents.map(e=>`<div class="flower-mini"><span>Flower #${e.flower} · <b>${safeName(e.collector)}</b>${e.initial?' · 2×':''}</span><strong class="gain">+${money(e.transfers.reduce((a,t)=>a+t.cents,0))}</strong></div>`).join('') : '<div class="empty-copy">No flower bonuses yet for this hand.</div>'}
+      </div>
+      <div class="current-flowers"><div class="panel-head"><h3>Declared Gangs</h3><span class="badge">${gangs.length} recorded</span></div>
+        ${gangs.length ? gangs.map(e => `<div class="flower-mini"><span><b>${safeName(e.player)}</b> claimed four identical tiles</span><strong class="${e.player!==model.east?'gain':'neutral'}">${e.player!==model.east?'Non-East':'East'}</strong></div>`).join('') : '<div class="empty-copy">No Gang recorded yet. You can also add one when marking a draw.</div>'}
+      </div>
+      <div class="divider"></div>
+      <h3 style="margin-bottom:11px">No winner?</h3>
+      <div class="round-actions"><button class="btn secondary wide" type="button" data-action="draw-confirm">Mark as draw & start next hand &rarr;</button></div>
+      <p class="note" style="margin-top:9px">No winning payment on a draw. ${nonEastGang?`A non-East Gang is recorded, so East will pass to ${safeName((model.east+1)%4)}.`:'East stays unless a non-East player declared Gang.'}</p>
+    </div><div class="hand-help"><b>Rotation:</b> East stays when East wins, or on a draw with no non-East Gang. If someone else wins—or a non-East player declares Gang on a drawn hand—East moves to the next seat. Balances carry forward.</div></section>`;
+  }
+  function summaryTransfers(transfers) {
+    if (!transfers.length) return 'No money transferred.';
+    if (transfers.length === 3 && transfers.every(t => t.to===transfers[0].to && t.cents===transfers[0].cents)) {
+      return `${transfers.map(t=>safeName(t.from)).join(', ')} paid ${safeName(transfers[0].to)} ${money(transfers[0].cents)} each`;
+    }
+    return transfers.map(t=>`${safeName(t.from)} → ${safeName(t.to)} ${money(t.cents)}`).join(' · ');
+  }
+  function historyCard(h, isCurrent) {
+    const last = h.outcome;
+    const badge = !last ? 'CURRENT' : last.type==='draw' ? 'DRAW' : (name(last.winner)+' WON');
+    const badgeCls = !last || last.type === 'win' ? 'positive' : 'draw';
+    return `<article class="history-hand">
+      <div class="history-hand-header"><div><div class="history-hand-title">Hand ${String(h.number).padStart(2,'0')} <span class="muted" style="font-weight:500">· East: ${safeName(h.east)}</span></div></div><span class="badge ${badgeCls}">${escapeHTML(badge)}</span></div>
+      ${h.events.length ? h.events.map(e => {
+        if (e.type === 'flower') {
+          const own = fromEast(h.east,e.flower)===e.collector;
+          return `<div class="history-event"><div class="history-event-header"><strong>Flower #${e.flower} · ${safeName(e.collector)} ${own?'(own pair)':'(other pair)'} ${e.initial?'· 2×':''}</strong><span class="money">+${money(e.transfers.reduce((a,t)=>a+t.cents,0))}</span></div><div class="history-transfer">${summaryTransfers(e.transfers)}</div></div>`;
+        }
+        if (e.type === 'gang') {
+          return `<div class="history-event"><div class="history-event-header"><strong>Gang declared · ${safeName(e.player)} ${e.player===h.east?'(East)':'(non-East)'}</strong><span class="money" style="color:var(--muted)">$0.00</span></div><div class="history-transfer">Four identical tiles claimed. Affects banker only if the hand draws.</div></div>`;
+        }
+        return `<div class="history-event"><div class="history-event-header"><strong>${e.tai} Tai · ${e.method==='self'?'Self-draw':'Discard'} · ${safeName(e.winner)}</strong><span class="money">+${money(e.transfers.reduce((a,t)=>a+t.cents,0))}</span></div><div class="history-transfer">${summaryTransfers(e.transfers)}</div></div>`;
+      }).join('') : `<div class="history-transfer" style="margin-top:10px">${last && last.type==='draw'?'Drawn hand. No flower events.':'No events recorded.'}</div>`}
+      ${last ? `<div class="history-transfer" style="border-top:1px solid #eff3ef; padding-top:9px; margin-top:5px"><b>Result:</b> ${last.type==='draw' ? (last.nonEastGang ? `Draw + non-East Gang — East passes to ${safeName(last.nextEast)}.` : 'Draw — East stays.') : last.winner===h.east ? `${safeName(h.east)} wins — East stays.`:`${safeName(last.winner)} wins — East passes to ${safeName((h.east+1)%4)}.`}</div>`:''}
+    </article>`;
+  }
+  function historyPanel(model) {
+    const completed = model.hands.slice().reverse();
+    const shown = ui.allHistory ? completed : completed.slice(0, 5);
+    return `<section class="history-section"><div class="history-title"><div><div class="eyebrow">Audit trail</div><h2 style="margin-top:4px">Hand history</h2></div>${completed.length > 5?`<button class="btn small" type="button" data-action="all-history">${ui.allHistory?'Show latest 5':'View all '+completed.length}</button>`:''}</div>
+      <div class="history-list">${completed.length===1 && !model.current.events.length ? '<div class="empty-history">Your payments and hand results will appear here as you play.</div>':shown.map(h => historyCard(h,h===model.current)).join('')}</div>
+    </section>`;
+  }
+  function mainView() {
+    const model = derive(session);
+    normalizeDraft(model);
+    const ok = model.total === STARTING_CENTS*4;
+    return `<main class="shell">
+      <header class="sitebar"><div class="brand"><div class="brand-icon" aria-hidden="true">東</div><div><div class="brand-name">Mahjong Ledger</div><div class="brand-sub">SINGAPORE HOUSE RULES</div></div></div><nav class="nav" aria-label="Game controls"><button class="btn" type="button" data-action="undo" ${session.actions.length?'':'disabled'} title="Undo last action">↶ Undo</button><button class="btn" type="button" data-action="export">Export</button><button class="btn" type="button" data-action="more">⋯ More</button></nav></header>
+      <section class="hero-row"><div><div class="eyebrow">Live scoreboard · Hand ${model.current.number}</div><h1>Everyone's balance</h1><p class="subtitle">Money automatically moves between the four players.</p></div><div class="total-pill ${ok?'':'error'}"><div class="total-label">${ok?'✓ TOTAL BALANCED':'TOTAL MISMATCH'}</div><strong>${money(model.total)}</strong></div></section>
+      ${playerCards(model)}
+      <div class="main-grid">
+        <section class="panel"><div class="panel-pad"><div class="panel-head"><div><div class="eyebrow">Quick entry</div><h2 style="margin-top:4px">Record an event</h2><p>One tap to calculate who pays whom.</p></div></div>
+          <div class="tabs" role="tablist" aria-label="Event type"><button class="tab ${ui.tab==='flower'?'active':''}" data-action="tab" data-value="flower" role="tab" aria-selected="${ui.tab==='flower'}">Flower bonus</button><button class="tab ${ui.tab==='win'?'active':''}" data-action="tab" data-value="win" role="tab" aria-selected="${ui.tab==='win'}">Win hand</button><button class="tab ${ui.tab==='gang'?'active':''}" data-action="tab" data-value="gang" role="tab" aria-selected="${ui.tab==='gang'}">Gang</button></div>
+          ${ui.tab==='flower' ? flowerForm(model) : ui.tab==='win' ? winForm(model) : gangForm(model)}
+        </div></section>
+        <aside class="sidebar">${currentHandPanel(model)}<section class="rules-mini"><h3>At a glance</h3><p><b>Discard win:</b> only the discarder pays the full Tai amount.</p><p><b>Self-draw:</b> each of the other three players pays half the Tai amount.</p><p><b>Own flowers:</b> all three opponents pay $0.20 each; $0.40 if both were in the first dealt tiles.</p><p><b>Other player's flowers:</b> that flower's owner pays $0.20; doubled to $0.40 if initially dealt.</p><p><b>Draw + non-East Gang:</b> banker passes to the next seat. No Gang payment is assumed.</p><button class="btn small" style="margin-top:12px" type="button" data-action="rules">Full rules</button></section></aside>
+      </div>
+      ${historyPanel(model)}
+      <footer class="footer"><span>Fixed starting funds: $30.00 per player · Maximum 5 Tai self-draw: $19.20 (before flowers).</span><span>Saved on this device only. No sign-in or user IDs.</span></footer>
+    </main>`;
+  }
+  function rulesModal() {
+    return `<div class="modal-head"><div><div class="eyebrow">Rules reference</div><h2>Singapore Mahjong money rules</h2></div><button class="modal-close" type="button" data-action="close-modal" aria-label="Close">×</button></div><div class="modal-body">
+      <p>All four players start with exactly <b>$30.00</b>. All payments are direct transfers, so the combined balance must always remain <b>$120.00</b>.</p>
+      <table class="rules-table"><thead><tr><th>Tai</th><th>Discarder pays</th><th>Self-draw: each pays</th><th>Self-draw total</th></tr></thead><tbody>${[1,2,3,4,5].map(t=>`<tr><td>${t}</td><td>${money(BASE_CENTS[t])}</td><td>${money(BASE_CENTS[t]/2)}</td><td>${money(BASE_CENTS[t]/2*3)}</td></tr>`).join('')}</tbody></table>
+      <h3>Flower pairs</h3><p style="margin-top:8px">Collect both flowers of another player's number: that player pays you <b>$0.20</b>. Collect both flowers of your own number: all three other players each pay you <b>$0.20</b>.</p>
+      <p>If <b>both</b> matching flowers were in the <b>original first dealt tiles</b>, each payment is doubled to <b>$0.40</b>. Later flower replacements do not count as initially dealt. Each numbered pair can pay out only once per hand.</p>
+      <h3>East banker / 東風</h3><p style="margin-top:8px">East is flower number <b>1</b>. In the configured seat order, the next three players own flower numbers <b>2, 3, 4</b> (South, West, North). Flower-number ownership changes as East changes.</p>
+      <p>If the <b>East banker wins</b>, the banker stays. If any other player wins, East moves to the next seat in the configured order. On a <b>draw</b>, East normally stays, <b>except when one or more non-East players declared Gang</b> (four identical tiles); then East advances one seat. An East player's Gang alone does not move East. Flower payments still apply on a drawn hand. No Gang payout is assumed.</p>
+      <div class="modal-controls"><button class="btn primary" data-action="close-modal" type="button">Done</button></div></div>`;
+  }
+  function modalView(model) {
+    if (!ui.modal) return '';
+    let content = '';
+    switch (ui.modal) {
+      case 'rules': content=rulesModal(); break;
+      case 'east':
+        content=`<div class="modal-head"><div><div class="eyebrow">Before the next event</div><h2>Choose East banker (東風)</h2></div><button class="modal-close" data-action="close-modal" type="button" aria-label="Close">×</button></div><div class="modal-body"><p>Choose who currently sits East. The other players are assigned South (2), West (3), and North (4) in seat order. This is available before any flower has been recorded this hand.</p><div class="banker-options">${session.players.map((n,i)=>`<button type="button" class="banker-opt ${model.east===i?'active':''}" data-action="set-east" data-value="${i}"><small>Seat ${i+1} ${model.east===i?'· CURRENT EAST':''}</small><strong>${escapeHTML(n)}</strong></button>`).join('')}</div><div class="modal-controls"><button class="btn" data-action="close-modal" type="button">Cancel</button></div></div>`;
+        break;
+      case 'draw': {
+        const nonEastGang = model.current.gangs.some(p => p !== model.east);
+        const nextEast = (model.east+1)%4;
+        content=`<div class="modal-head"><div><div class="eyebrow">Finish hand ${model.current.number}</div><h2>Record a drawn hand?</h2></div><button class="modal-close" data-action="close-modal" type="button" aria-label="Close">×</button></div><div class="modal-body">
+        <p>No winning payments will be added. Recorded flower bonuses remain. On a draw, the banker only moves if a <b>non-East player declared Gang</b>.</p>
+        <div class="preview"><div class="preview-top"><span class="micro">GANGS ALREADY RECORDED</span><strong>${model.current.gangs.length}</strong></div><div class="preview-list">${model.current.gangs.length?model.current.gangs.map(p=>safeName(p)).join(', '):'None'}</div></div>
+        <div class="field"><label for="draw-extra-gang">Add a Gang you haven't recorded yet (optional)</label><select id="draw-extra-gang"><option value="">No additional Gang</option>${session.players.map((n,i)=>`<option value="${i}">${escapeHTML(n)}${i===model.east?' (East)':' (non-East)'}</option>`).join('')}</select><p class="note" style="margin-top:6px">Select the player who claimed four identical tiles. Gang has no payment under these rules.</p></div>
+        <div id="draw-east-prediction" class="warning" role="status">${nonEastGang ? `Non-East Gang recorded. East passes from <b>${safeName(model.east)}</b> to <b>${safeName(nextEast)}</b> on the next hand.` : `No non-East Gang recorded. <b>${safeName(model.east)}</b> stays East on the next hand.`}</div>
+        <div class="modal-controls"><button type="button" class="btn" data-action="close-modal">Cancel</button><button type="button" class="btn primary" data-action="confirm-draw">Mark draw & start next hand</button></div></div>`;
+        break;
+      }
+      case 'more':
+        content=`<div class="modal-head"><div><div class="eyebrow">Session options</div><h2>Manage session</h2></div><button class="modal-close" data-action="close-modal" type="button" aria-label="Close">×</button></div><div class="modal-body"><p>Your session is stored locally in this browser. It is not shared with other devices.</p><div style="display:grid;gap:9px"><button class="btn wide" type="button" data-action="edit-names">Edit player names</button><button class="btn wide" type="button" data-action="export">Export payments to CSV</button><button class="btn wide danger" type="button" data-action="reset-confirm">Start a new session (reset all balances)</button></div></div>`;
+        break;
+      case 'names':
+        content=`<div class="modal-head"><div><div class="eyebrow">Manage players</div><h2>Edit player names</h2></div><button class="modal-close" data-action="close-modal" type="button" aria-label="Close">×</button></div><div class="modal-body"><p>Name changes also update the names displayed in your past hand history. Seat order and money will not change.</p><div class="setup-grid">${session.players.map((n,i)=>`<div class="setup-field"><label for="edit-name-${i}">Seat ${i+1}</label><input class="text-input" id="edit-name-${i}" value="${escapeHTML(n)}" maxlength="28"></div>`).join('')}</div><div class="modal-controls"><button type="button" class="btn" data-action="close-modal">Cancel</button><button type="button" class="btn primary" data-action="save-names">Save names</button></div></div>`;
+        break;
+      case 'reset':
+        content=`<div class="modal-head"><div><div class="eyebrow">New session</div><h2>Reset the game?</h2></div><button class="modal-close" data-action="close-modal" type="button" aria-label="Close">×</button></div><div class="modal-body"><p>This clears every hand and payment in the current session and sets all four starting balances back to <b>$30.00</b>. This action cannot be undone. Export first if you want a copy.</p><div class="modal-controls"><button type="button" class="btn" data-action="close-modal">Keep current game</button><button type="button" class="btn danger" data-action="confirm-reset">Reset and start over</button></div></div>`;
+        break;
+    }
+    return `<div class="modal-backdrop" id="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-label="${escapeHTML(ui.modal)} dialog">${content}</section></div>`;
+  }
+  function normalizeDraft(model) {
+    const d = ui.draft;
+    if (!Number.isInteger(d.collector) || d.collector < 0 || d.collector > 3) d.collector = 0;
+    if (!Number.isInteger(d.winner) || d.winner < 0 || d.winner > 3) d.winner = 0;
+    if (!Number.isInteger(d.gangPlayer) || d.gangPlayer < 0 || d.gangPlayer > 3) d.gangPlayer = 0;
+    if (d.discarder===d.winner || !Number.isInteger(d.discarder) || d.discarder<0 || d.discarder>3) d.discarder = [0,1,2,3].find(i=>i!==d.winner);
+    if (!Number.isInteger(d.flower) || d.flower<1 || d.flower>4) d.flower = 1;
+    if (!Number.isInteger(d.tai) || d.tai<1 || d.tai>5) d.tai = 3;
+    if (!['self','discard'].includes(d.method)) d.method='self';
+  }
+  function render() {
+    root.innerHTML = session ? mainView() : setupView();
+    if (ui.modal) {
+      const model = session ? derive(session) : null;
+      document.body.insertAdjacentHTML('beforeend', `<div id="modal-container">${modalView(model)}</div>`);
+      const closeTarget = document.querySelector('#modal-container .modal-close');
+      if (closeTarget) closeTarget.focus();
+    }
+    const previous = document.querySelectorAll('#modal-container:not(:last-of-type)');
+    // An existing modal container is removed on each render by removeModal() below.
+  }
+  function removeModal() {
+    document.querySelectorAll('#modal-container').forEach(e=>e.remove());
+  }
+  function repaint() { removeModal(); render(); }
+  function validateNames(inputs) {
+    const names = inputs.map(id => (document.getElementById(id)?.value || '').trim());
+    if (names.some(n=>!n)) { showToast('Please give every player a name.'); return null; }
+    return names;
+  }
+  function downloadCSV() {
+    const m = derive(session);
+    const rows = [
+      ['Mahjong Ledger | Singapore Mahjong'],
+      ['Session started',session.createdAt||''],
+      ['Starting amount per player', '30.00'],
+      [],
+      ['Player', 'Final balance (AUD)', 'Net change (AUD)', 'Current wind', 'Seat'],
+      ...session.players.map((n,i)=>[n,(m.balances[i]/100).toFixed(2),((m.balances[i]-STARTING_CENTS)/100).toFixed(2),WINDS[windOfPlayer(m.east,i)],i+1]),
+      ['TOTAL',(m.total/100).toFixed(2),'0.00'],
+      [],
+      ['Hand', 'East banker', 'Event', 'Payer', 'Receiver', 'Amount (AUD)', 'Notes']
+    ];
+    for (const hand of m.hands) {
+      for (const event of hand.events) {
+        if (event.type === 'gang') rows.push([hand.number, name(hand.east), 'Gang', '', '', '0.00', `${name(event.player)} declared Gang; no payment`]);
+        for (const transfer of event.transfers) {
+          rows.push([hand.number, name(hand.east), event.type==='flower'?'Flower':'Win', name(transfer.from), name(transfer.to), (transfer.cents/100).toFixed(2), event.type==='flower'? `Pair #${event.flower}${event.initial?' / original initial tiles x2':''}` : `${event.tai} Tai / ${event.method==='self'?'self-draw':'discard'}`]);
+        }
+      }
+      if (hand.outcome?.type === 'draw') rows.push([hand.number, name(hand.east), 'Draw', '', '', '0.00', hand.outcome.nonEastGang ? `Non-East Gang: banker advances to ${name(hand.outcome.nextEast)}` : 'No non-East Gang: banker stays']);
+    }
+    const csv = '\ufeff' + rows.map(row=>row.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'mahjong-ledger-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    showToast('CSV exported.');
+  }
+  function handleAction(action, button) {
+    if (action==='close-modal') { ui.modal=null; repaint(); return; }
+    if (action==='rules') { ui.modal='rules'; repaint(); return; }
+    if (action==='start') {
+      const names = validateNames([0,1,2,3].map(i=>'setup-player-'+i));
+      if (!names) return;
+      const east = Number(document.querySelector('input[name="setup-east"]:checked')?.value || 0);
+      session = {version:1, createdAt:new Date().toISOString(), players:names, initialEast:east, actions:[]};
+      ui = { tab:'flower', modal:null, allHistory:false, toast:'', draft:{collector:0,flower:1,initial:false,winner:0,tai:3,method:'self',discarder:1,gangPlayer:0}};
+      persist(); repaint(); showToast('Session started. Everyone has $30.00.'); return;
+    }
+    if (!session) return;
+    const m = derive(session);
+    const d = ui.draft;
+    if (action==='tab') { ui.tab=button.dataset.value; repaint(); return; }
+    if (action==='flower-no') { d.flower=Number(button.dataset.value); repaint(); return; }
+    if (action==='choose-tai') { d.tai=Number(button.dataset.value); repaint(); return; }
+    if (action==='method') { d.method=button.dataset.value; repaint(); return; }
+    if (action==='add-flower') {
+      if (m.current.flowers.includes(d.flower)) { showToast('That flower pair has already been paid this hand.'); return; }
+      const credits = flowerTransfers(m.east,d.collector,d.flower,d.initial).reduce((a,t)=>a+t.cents,0);
+      addAction({type:'flower',collector:d.collector,flower:d.flower,initial:d.initial},`${name(d.collector)} received ${money(credits)} for flowers.`);
+      d.initial=false;
+      const next = [1,2,3,4].find(n => !derive(session).current.flowers.includes(n));
+      if (next) d.flower=next;
+      repaint(); return;
+    }
+    if (action==='record-win') {
+      if (d.method==='discard' && d.discarder===d.winner) { showToast('The discarder cannot also be the winner.'); return; }
+      const oldEast=m.east;
+      const gain=winningTransfers(d.winner,d.tai,d.method,d.discarder).reduce((a,t)=>a+t.cents,0);
+      const winnerName=name(d.winner);
+      addAction({type:'win',winner:d.winner,tai:d.tai,method:d.method,discarder:d.method==='discard'?d.discarder:null}, `${winnerName} won ${money(gain)}. ${d.winner===oldEast?'East stays.':'East passes to '+name((oldEast+1)%4)+'.'}`);
+      d.initial=false; d.flower=1; ui.tab='flower'; repaint(); return;
+    }
+    if (action==='record-gang') {
+      addAction({type:'gang',player:d.gangPlayer},`${name(d.gangPlayer)} declared Gang. No money changed.`);
+      ui.tab='flower'; repaint(); return;
+    }
+    if (action==='draw-confirm') { ui.modal='draw'; repaint(); return; }
+    if (action==='confirm-draw') {
+      const extraRaw = document.getElementById('draw-extra-gang')?.value ?? '';
+      const extraGang = extraRaw === '' ? null : Number(extraRaw);
+      const hasNonEastGang = m.current.gangs.some(p => p !== m.east) || (extraGang !== null && extraGang !== m.east);
+      const nextEast = hasNonEastGang ? (m.east+1)%4 : m.east;
+      ui.modal=null;
+      addAction({type:'draw',extraGang},`Draw recorded. ${hasNonEastGang ? 'Non-East Gang: East passes to '+name(nextEast)+'.' : name(m.east)+' stays East.'}`);
+      d.initial=false; d.flower=1; ui.tab='flower'; repaint(); return;
+    }
+    if (action==='change-east') { if (m.current.events.length) { showToast('Finish this hand before choosing a new East.'); return; } ui.modal='east'; repaint(); return; }
+    if (action==='set-east') {
+      if (m.current.events.length) return;
+      const east=Number(button.dataset.value);
+      if (east!==m.east) addAction({type:'setEast',east},`${name(east)} is now East.`);
+      ui.modal=null; repaint(); return;
+    }
+    if (action==='undo') {
+      if (!session.actions.length) return;
+      session.actions.pop(); persist(); d.initial=false; ui.modal=null; repaint(); showToast('Last action undone. Balances recalculated.'); return;
+    }
+    if (action==='all-history') { ui.allHistory=!ui.allHistory; repaint(); return; }
+    if (action==='export') { ui.modal=null; repaint(); downloadCSV(); return; }
+    if (action==='more') { ui.modal='more'; repaint(); return; }
+    if (action==='edit-names') { ui.modal='names'; repaint(); return; }
+    if (action==='save-names') {
+      const names=validateNames([0,1,2,3].map(i=>'edit-name-'+i));
+      if (!names) return;
+      session.players=names; persist(); ui.modal=null; repaint(); showToast('Player names updated.'); return;
+    }
+    if (action==='reset-confirm') { ui.modal='reset'; repaint(); return; }
+    if (action==='confirm-reset') {
+      try {localStorage.removeItem(STORAGE_KEY);} catch(e){}
+      session=null; ui.modal=null; ui.tab='flower'; ui.allHistory=false; repaint(); showToast('New session ready.'); return;
+    }
+  }
+  root.addEventListener('click', function (event) {
+    const target = event.target.closest('[data-action]');
+    if (!target || target.disabled) return;
+    handleAction(target.dataset.action,target);
+  });
+  document.addEventListener('click', function (event) {
+    if (event.target.id === 'modal-backdrop') { ui.modal=null; repaint(); return; }
+    const target=event.target.closest('#modal-container [data-action]');
+    if (!target || target.disabled) return;
+    handleAction(target.dataset.action,target);
+  });
+  root.addEventListener('change', function (event) {
+    const t=event.target;
+    if (t.matches('input[name="setup-east"]')) {
+      document.querySelectorAll('[data-setup-east-label]').forEach(label=>label.classList.toggle('active',label.dataset.setupEastLabel===t.value));
+      return;
+    }
+    const field=t.dataset.field;
+    if (!field || !session) return;
+    if (field==='initial') ui.draft.initial=t.checked;
+    else ui.draft[field]=Number(t.value);
+    repaint();
+  });
+  root.addEventListener('input', function (event) {
+    if (!event.target.id?.startsWith('setup-player-')) return;
+    const i=Number(event.target.id.split('-').at(-1));
+    const preview=document.querySelector(`[data-setup-name-preview="${i}"]`);
+    if (preview) preview.textContent=event.target.value.trim() || `Seat ${i+1}`;
+  });
+  document.addEventListener('change', function (event) {
+    if (event.target.id !== 'draw-extra-gang' || !session) return;
+    const m = derive(session);
+    const raw = event.target.value;
+    const hasNonEastGang = m.current.gangs.some(p => p !== m.east) || (raw !== '' && Number(raw) !== m.east);
+    const nextEast = hasNonEastGang ? (m.east+1)%4 : m.east;
+    const node = document.getElementById('draw-east-prediction');
+    if (node) node.textContent = hasNonEastGang ?
+      `Non-East Gang: East passes from ${name(m.east)} to ${name(nextEast)} on the next hand.` :
+      `No non-East Gang: ${name(m.east)} stays East on the next hand.`;
+  });
+  document.addEventListener('keydown', function (event) {
+    if (event.key==='Escape' && ui.modal) {ui.modal=null; repaint();}
+  });
+  // Exposes deterministic, pure calculations for optional automated verification.
+  window.MahjongLedgerLogic={derive,flowerTransfers,winningTransfers,BASE_CENTS,STARTING_CENTS};
+  repaint();
+})();
+</script>
+</body>
+</html>
