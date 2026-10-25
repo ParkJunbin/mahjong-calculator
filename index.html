@@ -105,6 +105,8 @@
     .note { font-size: 11px; color: var(--muted); line-height: 1.5; }
     .warning { background: #fff7e9; border: 1px solid #f2d9a6; border-radius: 11px; padding: 12px; color: #755a27; font-size: 12px; margin-bottom: 16px; }
     .method-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+    .gang-mode-list { display: grid; grid-template-columns: 1fr; gap: 8px; }
+    .gang-mode-list .method { min-height: 60px; }
     .method { min-height: 73px; padding: 12px; border-radius: 11px; border: 1px solid var(--line); background: #fff; text-align: left; }
     .method strong { font-size: 13px; display: block; }
     .method small { font-size: 11px; color: var(--muted); display: block; margin-top: 4px; }
@@ -521,12 +523,15 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
   const STORAGE_KEY = 'sg-mahjong-ledger.v1';
   const STARTING_CENTS = 3000;
   const BASE_CENTS = [0, 80, 160, 320, 640, 1280];
+  const SELF_GANG_CENTS = 20;
+  const FLOWER_SET_CENTS = 40;
+  const FLOWER_SET_NAMES = {flowers:'Flowers (1–4)', seasons:'Seasons (1–4)'};
   const WINDS = ['East', 'South', 'West', 'North'];
   const WIND_CHARS = ['東', '南', '西', '北'];
   const defaultNames = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
   const root = document.getElementById('app');
   let session = loadSession();
-  let ui = { tab: 'flower', modal: null, allHistory: false, toast: '', draft: { collector: 0, flower: 1, initial: false, winner: 0, tai: 3, method: 'self', discarder: 1, gangPlayer: 0, gangPayer: null, gangAmount: '' } };
+  let ui = { tab: 'flower', modal: null, allHistory: false, toast: '', draft: { collector: 0, flower: 1, flowerMode:'pair', flowerSet:'flowers', initial: false, winner: 0, tai: 3, method: 'self', discarder: 1, gangPlayer: 0, gangMode:'self', gangPayer: null, gangAmount: '' } };
   let toastTimeout = null;
 
   function escapeHTML(value) {
@@ -561,6 +566,12 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
     }
     return [{ from: owner, to: collector, cents: perPayer }];
   }
+  function flowerSetTransfers(collector) {
+    return [0,1,2,3].filter(p=>p!==collector).map(from=>({from,to:collector,cents:FLOWER_SET_CENTS}));
+  }
+  function selfGangTransfers(player) {
+    return [0,1,2,3].filter(p=>p!==player).map(from=>({from,to:player,cents:SELF_GANG_CENTS}));
+  }
   function winningTransfers(winner, tai, method, discarder) {
     const amount = BASE_CENTS[tai];
     if (method === 'self') {
@@ -571,7 +582,7 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
   function addTransfers(balances, transfers) {
     transfers.forEach(t => { balances[t.from] -= t.cents; balances[t.to] += t.cents; });
   }
-  function newHand(number, east) { return { number, east, flowers: [], gangs: [], events: [], outcome: null }; }
+  function newHand(number, east) { return { number, east, flowers: [], flowerSets: [], gangs: [], events: [], outcome: null }; }
   function shotStatistics(hands) {
     const entries = [0,1,2,3].map(player => ({player, gangShots:0, gangPaid:0, winningDiscards:0, winPaid:0, totalShots:0, totalPaid:0, gangsClaimed:0}));
     for (const hand of hands) for (const event of hand.events) {
@@ -614,11 +625,22 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
         current.flowers.push(action.flower);
         continue;
       }
-      if (action.type === 'gang') {
-        const payer = Number.isInteger(action.payer) && action.payer >= 0 && action.payer < 4 && action.payer !== action.player && Number.isSafeInteger(action.cents) && action.cents > 0 ? action.payer : null;
-        const transfers = payer === null ? [] : [{from:payer, to:action.player, cents:action.cents}];
+      if (action.type === 'flowerSet') {
+        if (!Object.hasOwn(FLOWER_SET_NAMES,action.set) || current.flowerSets.includes(action.set) || !Number.isInteger(action.collector) || action.collector<0 || action.collector>3) continue;
+        const transfers=flowerSetTransfers(action.collector);
         addTransfers(balances,transfers); addTransfers(earned,transfers);
-        const event = {type:'gang', actionIndex:ai, player:action.player, payer, cents:payer===null?0:action.cents, transfers};
+        current.events.push({type:'flowerSet',actionIndex:ai,collector:action.collector,set:action.set,transfers});
+        current.flowerSets.push(action.set);
+        continue;
+      }
+      if (action.type === 'gang') {
+        // Older saved sessions had no mode: preserve their single-payer/unpaid payments exactly.
+        const legacyPayer=Number.isInteger(action.payer) && action.payer>=0 && action.payer<4 && action.payer!==action.player && Number.isSafeInteger(action.cents) && action.cents>0 ? action.payer : null;
+        const mode=['self','shot','unpaid'].includes(action.mode)?action.mode:(legacyPayer===null?'unpaid':'shot');
+        const payer=mode==='shot'?legacyPayer:null;
+        const transfers=mode==='self'?selfGangTransfers(action.player):payer===null?[]:[{from:payer,to:action.player,cents:action.cents}];
+        addTransfers(balances,transfers); addTransfers(earned,transfers);
+        const event={type:'gang',actionIndex:ai,player:action.player,mode,payer,cents:transfers.reduce((sum,t)=>sum+t.cents,0),transfers};
         current.events.push(event);
         current.gangs.push(action.player);
         continue;
@@ -733,6 +755,24 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
   }
   function flowerForm(model) {
     const d = ui.draft;
+    const modeChoices=`<div class="field"><div class="field-title">Flower bonus</div><div class="method-choices">
+      <button type="button" class="method ${d.flowerMode==='pair'?'selected':''}" data-action="flower-mode" data-value="pair" aria-pressed="${d.flowerMode==='pair'}"><strong>Matching number pair</strong><small>Both tiles of 1, 2, 3 or 4</small></button>
+      <button type="button" class="method ${d.flowerMode==='set'?'selected':''}" data-action="flower-mode" data-value="set" aria-pressed="${d.flowerMode==='set'}"><strong>Same-colour set</strong><small>All 4 flowers of one colour</small></button>
+    </div></div>`;
+    if(d.flowerMode==='set') {
+      const taken=model.current.flowerSets;
+      const already=taken.includes(d.flowerSet);
+      const full=taken.length===2;
+      const received=FLOWER_SET_CENTS*3;
+      return `${modeChoices}
+        <div class="field"><label for="set-collector">Who collected the complete same-colour set?</label><select id="set-collector" data-field="collector">${playerOptions(d.collector)}</select></div>
+        <div class="field"><div class="field-title">Which group of four tiles?</div><div class="method-choices">
+          ${Object.entries(FLOWER_SET_NAMES).map(([key,label])=>`<button type="button" class="method ${d.flowerSet===key?'selected':''}" data-action="flower-set" data-value="${key}" aria-pressed="${d.flowerSet===key}"><strong>${label}</strong><small>${taken.includes(key)?'Already recorded this hand':'Four tiles · one colour'}</small></button>`).join('')}
+        </div><p class="note" style="margin-top:8px">A same-colour set means all four numbers (1–4) from one flower or season group. This bonus is separate from number-pair bonuses and is not doubled in the initial deal.</p></div>
+        ${already?`<div class="warning">The ${FLOWER_SET_NAMES[d.flowerSet]} set has already been paid this hand.</div>`:''}
+        <div class="preview"><div class="preview-top"><span class="micro">COMPLETE COLOUR SET</span><strong class="amount">+${money(received)}</strong></div><div class="preview-list">Each of the other three players pays <b>${safeName(d.collector)}</b> ${money(FLOWER_SET_CENTS)}.</div></div>
+        <button type="button" class="btn primary wide big" data-action="add-flower-set" ${already||full?'disabled':''}>${full?'Both colour sets recorded':'Record set bonus'} &rarr;</button>`;
+    }
     const taken = model.current.flowers;
     const already = taken.includes(d.flower);
     const owner = fromEast(model.east, d.flower);
@@ -740,7 +780,7 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
     const transfers = flowerTransfers(model.east, d.collector, d.flower, d.initial);
     const received = transfers.reduce((sum,x) => sum + x.cents, 0);
     const full = taken.length >= 4;
-    return `
+    return `${modeChoices}
       <div class="field"><label for="flower-collector">Who collected both flowers?</label><select id="flower-collector" data-field="collector">${playerOptions(d.collector)}</select></div>
       <div class="field"><div class="field-title">Which flower number was collected?</div><div class="choices" role="group" aria-label="Flower number">
         ${[1,2,3,4].map(n => {
@@ -774,20 +814,27 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
     const changesOnDraw = d.gangPlayer !== model.east || model.current.gangs.some(p => p !== model.east);
     const nextEast = (model.east+1)%4;
     const cents = parseMoneyInput(d.gangAmount);
-    const isPaid = d.gangPayer !== null;
+    const isShot = d.gangMode==='shot';
+    const isSelf = d.gangMode==='self';
+    const amount = isSelf ? SELF_GANG_CENTS*3 : isShot && cents>0 ? cents : 0;
     return `
       <div class="field"><label for="gang-player">Who declared a Gang (four identical tiles)?</label><select id="gang-player" data-field="gangPlayer">${playerOptions(d.gangPlayer)}</select></div>
-      <div class="field"><label for="gang-payer">Who shot / paid for this Gang?</label><select id="gang-payer" data-field="gangPayer"><option value="" ${!isPaid?'selected':''}>No payer — declaration only</option>${session.players.map((n,i)=>i===d.gangPlayer?'':`<option value="${i}" ${d.gangPayer===i?'selected':''}>${escapeHTML(n)}</option>`).join('')}</select><p class="note" style="margin-top:6px">Choose a payer only for a paid Gang. An unpaid Gang still affects East on a draw.</p></div>
-      ${isPaid ? `<div class="field"><label for="gang-amount">Amount the shooter pays (AUD)</label><input class="text-input" id="gang-amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Enter the actual amount" value="${escapeHTML(d.gangAmount)}" data-field="gangAmount"><p class="note" style="margin-top:6px">No fixed Gang price was specified. Enter the amount actually agreed at the table.</p></div>` : ''}
-      <div class="preview"><div class="preview-top"><span class="micro">${isPaid?'GANG SHOT PAYMENT':'GANG DECLARATION'}</span><strong class="amount" id="gang-shot-amount">${isPaid&&cents>0?money(cents):'$0.00'}</strong></div>
-        <div class="preview-list" id="gang-shot-note">${isPaid ? (cents>0 ? `<b>${safeName(d.gangPayer)}</b> pays <b>${safeName(d.gangPlayer)}</b> ${money(cents)}. This counts as one Gang shot.` : 'Enter a positive payment amount to count a Gang shot.') : 'No shooter is recorded, so this Gang will not count as a payment.'}</div>
+      <div class="field"><div class="field-title">How was the Gang claimed?</div><div class="gang-mode-list">
+        <button type="button" class="method ${isSelf?'selected':''}" data-action="gang-mode" data-value="self" aria-pressed="${isSelf}"><strong>Self-claimed Gang</strong><small>All three opponents pay $0.20 each · receive $0.60</small></button>
+        <button type="button" class="method ${isShot?'selected':''}" data-action="gang-mode" data-value="shot" aria-pressed="${isShot}"><strong>Another player paid for the Gang</strong><small>Choose the shooter and payment amount</small></button>
+        <button type="button" class="method ${d.gangMode==='unpaid'?'selected':''}" data-action="gang-mode" data-value="unpaid" aria-pressed="${d.gangMode==='unpaid'}"><strong>Declaration only</strong><small>Record Gang for banker rotation, no payout</small></button>
+      </div></div>
+      ${isShot?`<div class="field"><label for="gang-payer">Who paid / shot this Gang?</label><select id="gang-payer" data-field="gangPayer">${session.players.map((n,i)=>i===d.gangPlayer?'':`<option value="${i}" ${d.gangPayer===i?'selected':''}>${escapeHTML(n)}</option>`).join('')}</select></div>
+        <div class="field"><label for="gang-amount">Amount the shooter pays (AUD)</label><input class="text-input" id="gang-amount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="e.g. 0.20" value="${escapeHTML(d.gangAmount)}" data-field="gangAmount"><p class="note" style="margin-top:6px">Enter the agreed amount paid by this one player. The Gang shot count increases by one.</p></div>`:''}
+      <div class="preview"><div class="preview-top"><span class="micro">${isSelf?'SELF-CLAIMED GANG':isShot?'GANG SHOT PAYMENT':'GANG DECLARATION'}</span><strong class="amount" id="gang-shot-amount">${amount>0?'+'+money(amount):'$0.00'}</strong></div>
+        <div class="preview-list" id="gang-shot-note">${isSelf?`Each of the other three players pays <b>${safeName(d.gangPlayer)}</b> ${money(SELF_GANG_CENTS)}. Nobody is counted as a Gang shooter.`:isShot?(cents>0?`<b>${safeName(d.gangPayer)}</b> pays <b>${safeName(d.gangPlayer)}</b> ${money(cents)}. Counts as one Gang shot.`:'Enter a positive payment amount to count a Gang shot.'):'No payment. This Gang still affects East on a draw.'}</div>
       </div>
       <p class="note" style="margin-bottom:13px">${changesOnDraw?`If the hand ends in a draw, East passes to <b>${safeName(nextEast)}</b>.`:`If the hand ends in a draw, <b>${safeName(model.east)}</b> stays East unless a non-East player declares Gang.`}</p>
       <button type="button" class="btn primary wide big" data-action="record-gang">Record Gang &rarr;</button>`;
   }
   function currentHandPanel(model) {
     const h = model.current;
-    const flowerEvents = h.events.filter(e => e.type === 'flower');
+    const flowerEvents = h.events.filter(e => e.type === 'flower' || e.type === 'flowerSet');
     const gangs = h.events.filter(e => e.type === 'gang');
     const nonEastGang = h.gangs.some(p => p !== model.east);
     return `<section class="panel"><div class="panel-pad">
@@ -795,11 +842,11 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
       <div class="round-meta"><div><small>CURRENT BANKER · 東 / EAST</small><strong>${safeName(model.east)}</strong></div><div class="east-seal" aria-label="East">東</div></div>
       <div style="margin-top:11px"><button type="button" class="btn secondary wide" data-action="change-east" ${h.events.some(e=>e.type!=='adjust')?'disabled title="Finish this hand before changing East"':''}>Choose / change East banker</button></div>
       ${h.events.some(e=>e.type!=='adjust')?'<p class="note" style="margin-top:7px">Banker is locked once a game event is recorded for this hand. Undo to correct it.</p>':''}
-      <div class="current-flowers"><div class="panel-head"><h3>Flowers recorded</h3><span class="badge">${h.flowers.length} / 4 pairs</span></div>
-        ${flowerEvents.length ? flowerEvents.map(e=>`<div class="flower-mini"><span>Flower #${e.flower} · <b>${safeName(e.collector)}</b>${e.initial?' · 2×':''}</span><strong class="gain">+${money(e.transfers.reduce((a,t)=>a+t.cents,0))}</strong></div>`).join('') : '<div class="empty-copy">No flower bonuses yet for this hand.</div>'}
+      <div class="current-flowers"><div class="panel-head"><h3>Flowers recorded</h3><span class="badge">${h.flowers.length} pairs · ${h.flowerSets.length} sets</span></div>
+        ${flowerEvents.length ? flowerEvents.map(e=>`<div class="flower-mini"><span>${e.type==='flowerSet'?`Same-colour ${escapeHTML(FLOWER_SET_NAMES[e.set])}`:`Flower #${e.flower}${e.initial?' · 2×':''}`} · <b>${safeName(e.collector)}</b></span><strong class="gain">+${money(e.transfers.reduce((a,t)=>a+t.cents,0))}</strong></div>`).join('') : '<div class="empty-copy">No flower bonuses yet for this hand.</div>'}
       </div>
       <div class="current-flowers"><div class="panel-head"><h3>Declared Gangs</h3><span class="badge">${gangs.length} recorded</span></div>
-        ${gangs.length ? gangs.map(e => `<div class="flower-mini"><span><b>${safeName(e.player)}</b> claimed four tiles${e.payer!==null?` · ${safeName(e.payer)} paid ${money(e.cents)}`:""}</span><strong class="${e.player!==model.east?'gain':'neutral'}">${e.player!==model.east?'Non-East':'East'}</strong></div>`).join('') : '<div class="empty-copy">No Gang recorded yet. You can also add an unpaid Gang when marking a draw.</div>'}
+        ${gangs.length ? gangs.map(e => `<div class="flower-mini"><span><b>${safeName(e.player)}</b> declared Gang${e.mode==='self'?` · +${money(e.cents)} self-claimed`:e.payer!==null?` · ${safeName(e.payer)} paid ${money(e.cents)}`:' · unpaid'}</span><strong class="${e.player!==model.east?'gain':'neutral'}">${e.player!==model.east?'Non-East':'East'}</strong></div>`).join('') : '<div class="empty-copy">No Gang recorded yet. You can also add a declaration-only Gang when marking a draw.</div>'}
       </div>
       <div class="divider"></div>
       <h3 style="margin-bottom:11px">No winner?</h3>
@@ -825,8 +872,13 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
           const own = fromEast(h.east,e.flower)===e.collector;
           return `<div class="history-event"><div class="history-event-header"><strong>Flower #${e.flower} · ${safeName(e.collector)} ${own?'(own pair)':'(other pair)'} ${e.initial?'· 2×':''}</strong><span class="money">+${money(e.transfers.reduce((a,t)=>a+t.cents,0))}</span></div><div class="history-transfer">${summaryTransfers(e.transfers)}</div></div>`;
         }
+        if (e.type === 'flowerSet') {
+          return `<div class="history-event"><div class="history-event-header"><strong>Same-colour set · ${escapeHTML(FLOWER_SET_NAMES[e.set])} · ${safeName(e.collector)}</strong><span class="money">+${money(e.transfers.reduce((a,t)=>a+t.cents,0))}</span></div><div class="history-transfer">${summaryTransfers(e.transfers)}</div></div>`;
+        }
         if (e.type === 'gang') {
-          return `<div class="history-event"><div class="history-event-header"><strong>Gang · ${safeName(e.player)} ${e.player===h.east?'(East)':'(non-East)'}</strong><span class="money">${e.payer===null?'No payment':`+${money(e.cents)}`}</span></div><div class="history-transfer">${e.payer===null?'Gang declared without a payer.':summaryTransfers(e.transfers)+' · Counts as one Gang shot.'} On a draw, a non-East Gang moves the banker.</div></div>`;
+          const label=e.mode==='self'?'Self-claimed Gang':e.mode==='shot'?'Gang paid by shooter':'Gang declaration';
+          const detail=e.mode==='self'?summaryTransfers(e.transfers)+' · No Gang shooter counted.':e.mode==='shot'?summaryTransfers(e.transfers)+' · Counts as one Gang shot.':'Gang declared without a payment.';
+          return `<div class="history-event"><div class="history-event-header"><strong>${label} · ${safeName(e.player)} ${e.player===h.east?'(East)':'(non-East)'}</strong><span class="money">${e.transfers.length?'+'+money(e.cents):'No payment'}</span></div><div class="history-transfer">${detail} On a draw, a non-East Gang moves the banker.</div></div>`;
         }
         if (e.type === 'adjust') {
           const changes = e.changes.map((amount,i)=>amount===0?'':`${safeName(i)} ${signed(amount)}`).filter(Boolean).join(' · ');
@@ -852,7 +904,7 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
     }
     const gang = leaders('gangShots'), discard = leaders('winningDiscards'), combined = leaders('totalShots');
     return `<section class="shot-section panel" id="shot-stats"><div class="panel-pad">
-      <div class="panel-head"><div><div class="eyebrow">Session statistics</div><h2 style="margin-top:4px">Who shot the most?</h2><p>Counts Gang payers and players who discarded a winning tile.</p></div><span class="badge">${entries.reduce((a,e)=>a+e.totalShots,0)} total shots</span></div>
+      <div class="panel-head"><div><div class="eyebrow">Session statistics</div><h2 style="margin-top:4px">Who shot the most?</h2><p>Counts single-player Gang shooters and discarded winning tiles. Self-claimed Gang payments are excluded.</p></div><span class="badge">${entries.reduce((a,e)=>a+e.totalShots,0)} total shots</span></div>
       <div class="shot-leaders">
         <div class="shot-leader"><div class="eyebrow">Most Gang shots</div><strong>${gang.names}</strong><span>${gang.count} time${gang.count===1?'':'s'}</span></div>
         <div class="shot-leader"><div class="eyebrow">Most winning discards</div><strong>${discard.names}</strong><span>${discard.count} time${discard.count===1?'':'s'}</span></div>
@@ -865,7 +917,7 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
           <div class="shot-player-bottom"><span>Total shot payments</span><strong>${money(e.totalPaid)}</strong></div>
         </article>`).join('')}
       </div>
-      <p class="note shot-note">Only events recorded in this browser session count. A Gang shot is recorded when someone is selected as payer and a positive amount is entered; unpaid Gangs still affect banker rotation. Manually edited balances do not add shots.</p>
+      <p class="note shot-note">Only events recorded in this browser session count. A Gang shot requires one designated payer and a positive amount. Self-claimed Gangs pay $0.20 from each opponent, but no one is a shooter. Unpaid Gangs still affect banker rotation. Balance edits do not add shots.</p>
     </div></section>`;
   }
   function mainView() {
@@ -877,11 +929,11 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
       <section class="hero-row"><div><div class="eyebrow">Hand ${model.current.number} · Session ledger</div><h1>Current balances</h1><p class="subtitle">All amounts in AUD · ${model.startHand===1&&model.initialBalances.every(v=>v===STARTING_CENTS)?'Standard $30.00 start':'Resumed from hand '+model.startHand+' with entered balances'}</p></div><div class="total-pill ${ok?'':'error'}"><div class="total-label">${ok?'TABLE TOTAL':'TOTAL MISMATCH'}</div><strong>${money(model.total)}</strong></div></section>
       ${playerCards(model)}
       <div class="main-grid">
-        <section class="panel"><div class="panel-pad"><div class="panel-head"><div><div class="eyebrow">Current hand</div><h2 style="margin-top:4px">Record a result</h2><p>Record flowers, a winning tile, or a paid/unpaid Gang.</p></div></div>
+        <section class="panel"><div class="panel-pad"><div class="panel-head"><div><div class="eyebrow">Current hand</div><h2 style="margin-top:4px">Record a result</h2><p>Record flower pairs or colour sets, a winning tile, or a Gang.</p></div></div>
           <div class="tabs" role="tablist" aria-label="Event type"><button class="tab ${ui.tab==='flower'?'active':''}" data-action="tab" data-value="flower" role="tab" aria-selected="${ui.tab==='flower'}">Flowers</button><button class="tab ${ui.tab==='win'?'active':''}" data-action="tab" data-value="win" role="tab" aria-selected="${ui.tab==='win'}">Win</button><button class="tab ${ui.tab==='gang'?'active':''}" data-action="tab" data-value="gang" role="tab" aria-selected="${ui.tab==='gang'}">Gang</button></div>
           ${ui.tab==='flower' ? flowerForm(model) : ui.tab==='win' ? winForm(model) : gangForm(model)}
         </div></section>
-        <aside class="sidebar">${currentHandPanel(model)}<section class="rules-mini"><h3>Payment rules</h3><p><b>Discard win:</b> only the discarder pays the full Tai amount.</p><p><b>Self-draw:</b> each of the other three players pays half the Tai amount.</p><p><b>Own flowers:</b> all three opponents pay $0.20 each; $0.40 if both were in the first dealt tiles.</p><p><b>Other player's flowers:</b> that flower's owner pays $0.20; doubled to $0.40 if initially dealt.</p><p><b>Draw + non-East Gang:</b> banker passes to the next seat. Gang shot payments are entered manually when they occur.</p><button class="btn small" style="margin-top:12px" type="button" data-action="rules">Full rules</button></section></aside>
+        <aside class="sidebar">${currentHandPanel(model)}<section class="rules-mini"><h3>Payment rules</h3><p><b>Discard win:</b> only the discarder pays the full Tai amount.</p><p><b>Self-draw:</b> each of the other three players pays half the Tai amount.</p><p><b>Own flowers:</b> all three opponents pay $0.20 each; $0.40 if both were in the first dealt tiles.</p><p><b>Other player's flowers:</b> that flower's owner pays $0.20; doubled to $0.40 if initially dealt.</p><p><b>Self-claimed Gang:</b> all three opponents pay $0.20 each ($0.60 total).</p><p><b>Same-colour set:</b> four flowers or seasons of one group; each opponent pays $0.40 ($1.20 total).</p><p><b>Draw + non-East Gang:</b> banker passes to the next seat. Other Gang shots can still use manual amounts.</p><button class="btn small" style="margin-top:12px" type="button" data-action="rules">Full rules</button></section></aside>
       </div>
       ${shotPanel(model)}
       ${historyPanel(model)}
@@ -894,9 +946,11 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
       <table class="rules-table"><thead><tr><th>Tai</th><th>Discarder pays</th><th>Self-draw: each pays</th><th>Self-draw total</th></tr></thead><tbody>${[1,2,3,4,5].map(t=>`<tr><td>${t}</td><td>${money(BASE_CENTS[t])}</td><td>${money(BASE_CENTS[t]/2)}</td><td>${money(BASE_CENTS[t]/2*3)}</td></tr>`).join('')}</tbody></table>
       <h3>Flower pairs</h3><p style="margin-top:8px">Collect both flowers of another player's number: that player pays you <b>$0.20</b>. Collect both flowers of your own number: all three other players each pay you <b>$0.20</b>.</p>
       <p>If <b>both</b> matching flowers were in the <b>original first dealt tiles</b>, each payment is doubled to <b>$0.40</b>. Later flower replacements do not count as initially dealt. Each numbered pair can pay out only once per hand.</p>
+      <h3>Four matching-colour flowers</h3><p style="margin-top:8px">If a player has all four numbered tiles (1–4) of the <b>same flower/season colour</b>, each opponent pays that player <b>$0.40</b>, for <b>$1.20 total</b>. This is a separate bonus from matching-number pairs. Each of the two colour sets can be claimed only once per hand, and it is <b>not doubled</b> by the initial dealt tiles.</p>
+      <h3>Gang payments</h3><p style="margin-top:8px">For a <b>self-claimed Gang</b>, each of the other three players pays <b>$0.20</b> ($0.60 total). For a Gang paid for by another player, choose the shooter and enter the amount they paid; this records one Gang shot. A declaration-only Gang has no payment, but still counts for banker rotation.</p>
       <h3>East banker / 東風</h3><p style="margin-top:8px">East is flower number <b>1</b>. In the configured seat order, the next three players own flower numbers <b>2, 3, 4</b> (South, West, North). Flower-number ownership changes as East changes.</p>
-      <p>If the <b>East banker wins</b>, the banker stays. If any other player wins, East moves to the next seat in the configured order. On a <b>draw</b>, East normally stays, <b>except when one or more non-East players declared Gang</b> (four identical tiles); then East advances one seat. An East player's Gang alone does not move East. Flower payments still apply on a drawn hand. To track who paid for a Gang, select a shooter/payer and enter the actual payment amount. Unpaid Gang declarations are also supported.</p>
-      <h3>Shot tracker &amp; manual balances</h3><p style="margin-top:8px">A Gang shot is counted against the player recorded as paying for that Gang. A winning discard is counted against the player who supplied the winning tile. The scoreboard separately totals the counts and paid amounts. Starting mid-game does not create historical shot counts.</p>
+      <p>If the <b>East banker wins</b>, the banker stays. If any other player wins, East moves to the next seat in the configured order. On a <b>draw</b>, East normally stays, <b>except when one or more non-East players declared Gang</b> (four identical tiles); then East advances one seat. An East player's Gang alone does not move East. Flower payments still apply on a drawn hand. A self-claimed Gang is paid by all three opponents. A shot Gang can instead have a single payer; declaration-only Gangs are also supported.</p>
+      <h3>Shot tracker &amp; manual balances</h3><p style="margin-top:8px">A Gang shot is counted only against a player explicitly selected as the sole payer; self-claimed Gang contributions are not shots. A winning discard is counted against the player who supplied the winning tile. The scoreboard separately totals the counts and paid amounts. Starting mid-game does not create historical shot counts.</p>
       <p>Use <b>Edit balances</b> to replace the current four totals after a mistake or to resume tracking. The correction is logged and undoable but does not count as Mahjong winnings.</p>
       <div class="modal-controls"><button class="btn primary" data-action="close-modal" type="button">Done</button></div></div>`;
   }
@@ -914,7 +968,7 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
         content=`<div class="modal-head"><div><div class="eyebrow">Finish hand ${model.current.number}</div><h2>Record a drawn hand?</h2></div><button class="modal-close" data-action="close-modal" type="button" aria-label="Close">×</button></div><div class="modal-body">
         <p>No winning payments will be added. Recorded flower bonuses remain. On a draw, the banker only moves if a <b>non-East player declared Gang</b>.</p>
         <div class="preview"><div class="preview-top"><span class="micro">GANGS ALREADY RECORDED</span><strong>${model.current.gangs.length}</strong></div><div class="preview-list">${model.current.gangs.length?model.current.gangs.map(p=>safeName(p)).join(', '):'None'}</div></div>
-        <div class="field"><label for="draw-extra-gang">Add a Gang you haven't recorded yet (optional)</label><select id="draw-extra-gang"><option value="">No additional Gang</option>${session.players.map((n,i)=>`<option value="${i}">${escapeHTML(n)}${i===model.east?' (East)':' (non-East)'}</option>`).join('')}</select><p class="note" style="margin-top:6px">This is an unpaid Gang declaration. To count a payer and amount, record it using the Gang tab before marking a draw.</p></div>
+        <div class="field"><label for="draw-extra-gang">Add a Gang you haven't recorded yet (optional)</label><select id="draw-extra-gang"><option value="">No additional Gang</option>${session.players.map((n,i)=>`<option value="${i}">${escapeHTML(n)}${i===model.east?' (East)':' (non-East)'}</option>`).join('')}</select><p class="note" style="margin-top:6px">This quick option records only the declaration (no money). For a self-claimed Gang with a $0.60 payout, or a Gang shot, use the Gang tab first.</p></div>
         <div id="draw-east-prediction" class="warning" role="status">${nonEastGang ? `Non-East Gang recorded. East passes from <b>${safeName(model.east)}</b> to <b>${safeName(nextEast)}</b> on the next hand.` : `No non-East Gang recorded. <b>${safeName(model.east)}</b> stays East on the next hand.`}</div>
         <div class="modal-controls"><button type="button" class="btn" data-action="close-modal">Cancel</button><button type="button" class="btn primary" data-action="confirm-draw">Mark draw & start next hand</button></div></div>`;
         break;
@@ -948,6 +1002,10 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
     if (d.gangPayer!==null && (!Number.isInteger(d.gangPayer) || d.gangPayer<0 || d.gangPayer>3 || d.gangPayer===d.gangPlayer)) d.gangPayer=null;
     if (typeof d.gangAmount!=='string') d.gangAmount='';
     if (!Number.isInteger(d.flower) || d.flower<1 || d.flower>4) d.flower = 1;
+    if (!['pair','set'].includes(d.flowerMode)) d.flowerMode='pair';
+    if (!Object.hasOwn(FLOWER_SET_NAMES,d.flowerSet)) d.flowerSet='flowers';
+    if (!['self','shot','unpaid'].includes(d.gangMode)) d.gangMode='self';
+    if (d.gangMode==='shot' && d.gangPayer===null) d.gangPayer=[0,1,2,3].find(i=>i!==d.gangPlayer);
     if (!Number.isInteger(d.tai) || d.tai<1 || d.tai>5) d.tai = 3;
     if (!['self','discard'].includes(d.method)) d.method='self';
   }
@@ -995,12 +1053,13 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
           continue;
         }
         if(event.type==='gang' && !event.transfers.length) {
-          rows.push([hand.number,name(hand.east),'Gang (unpaid)','','','0.00',`${name(event.player)} declared Gang; no Gang shot counted`]);
+          rows.push([hand.number,name(hand.east),'Gang (declaration only)','','','0.00',`${name(event.player)} declared Gang; no payout or shooter counted`]);
         }
         for(const transfer of event.transfers) {
-          const eventName=event.type==='gang'?'Gang shot':event.type==='flower'?'Flower':'Win';
-          const detail=event.type==='gang'?`${name(event.player)} claimed Gang; ${name(event.payer)} shot`:
-            event.type==='flower'?`Pair #${event.flower}${event.initial?' / original dealt tiles x2':''}`:`${event.tai} Tai / ${event.method==='self'?'self-draw':'discard'}`;
+          const eventName=event.type==='gang'?(event.mode==='self'?'Self-claimed Gang':'Gang shot'):event.type==='flower'?'Flower pair':event.type==='flowerSet'?'Same-colour flower set':'Win';
+          const detail=event.type==='gang'?event.mode==='self'?`${name(event.player)} claimed Gang; all opponents pay; no shot counted`:`${name(event.player)} claimed Gang; ${name(event.payer)} shot`:
+            event.type==='flower'?`Pair #${event.flower}${event.initial?' / original dealt tiles x2':''}`:
+            event.type==='flowerSet'?`${FLOWER_SET_NAMES[event.set]}; all opponents pay 0.40`:`${event.tai} Tai / ${event.method==='self'?'self-draw':'discard'}`;
           rows.push([hand.number,name(hand.east),eventName,name(transfer.from),name(transfer.to),(transfer.cents/100).toFixed(2),detail]);
         }
       }
@@ -1031,7 +1090,7 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
         if(!Number.isInteger(startHand) || startHand<1 || startHand>9999){showToast('Hand number must be between 1 and 9999.');return;}
       }
       session = {version:1, createdAt:new Date().toISOString(), players:names, initialEast:east, initialBalances, startHand, actions:[]};
-      ui = { tab:'flower', modal:null, allHistory:false, toast:'', draft:{collector:0,flower:1,initial:false,winner:0,tai:3,method:'self',discarder:1,gangPlayer:0,gangPayer:null,gangAmount:''}};
+      ui = { tab:'flower', modal:null, allHistory:false, toast:'', draft:{collector:0,flower:1,flowerMode:'pair',flowerSet:'flowers',initial:false,winner:0,tai:3,method:'self',discarder:1,gangPlayer:0,gangMode:'self',gangPayer:null,gangAmount:''}};
       persist(); repaint(); showToast(resume?'Tracking resumed from hand '+startHand+'.':'Session started at $30.00 each.'); return;
     }
     if (!session) return;
@@ -1039,6 +1098,9 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
     const d = ui.draft;
     if (action==='tab') { ui.tab=button.dataset.value; repaint(); return; }
     if (action==='flower-no') { d.flower=Number(button.dataset.value); repaint(); return; }
+    if (action==='flower-mode') { d.flowerMode=button.dataset.value; repaint(); return; }
+    if (action==='flower-set') { d.flowerSet=button.dataset.value; repaint(); return; }
+    if (action==='gang-mode') { d.gangMode=button.dataset.value; if(d.gangMode==='shot' && (d.gangPayer===null||d.gangPayer===d.gangPlayer)) d.gangPayer=[0,1,2,3].find(i=>i!==d.gangPlayer); repaint(); return; }
     if (action==='choose-tai') { d.tai=Number(button.dataset.value); repaint(); return; }
     if (action==='method') { d.method=button.dataset.value; repaint(); return; }
     if (action==='add-flower') {
@@ -1050,6 +1112,15 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
       if (next) d.flower=next;
       repaint(); return;
     }
+    if (action==='add-flower-set') {
+      if(m.current.flowerSets.includes(d.flowerSet)) {showToast('That same-colour flower set was already recorded this hand.');return;}
+      const set=d.flowerSet;
+      const received=FLOWER_SET_CENTS*3;
+      addAction({type:'flowerSet',collector:d.collector,set},`${name(d.collector)} received ${money(received)} for ${FLOWER_SET_NAMES[set]}.`);
+      const next=Object.keys(FLOWER_SET_NAMES).find(k=>!derive(session).current.flowerSets.includes(k));
+      if(next) d.flowerSet=next;
+      repaint();return;
+    }
     if (action==='record-win') {
       if (d.method==='discard' && d.discarder===d.winner) { showToast('The discarder cannot also be the winner.'); return; }
       const oldEast=m.east;
@@ -1059,15 +1130,17 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
       d.initial=false; d.flower=1; ui.tab='flower'; repaint(); return;
     }
     if (action==='record-gang') {
-      let payer=null, cents=0;
-      if(d.gangPayer!==null) {
+      const mode=d.gangMode;
+      let payer=null,cents=0;
+      if(mode==='shot') {
         payer=d.gangPayer;
         cents=parseMoneyInput(d.gangAmount);
-        if(payer===d.gangPlayer){showToast('The Gang claimant cannot also pay themselves.');return;}
-        if(!Number.isSafeInteger(cents)||cents<=0){showToast('Enter the positive amount paid for the Gang.');return;}
+        if(!Number.isInteger(payer)||payer<0||payer>3||payer===d.gangPlayer){showToast('Choose a valid Gang shooter.');return;}
+        if(!Number.isSafeInteger(cents)||cents<=0){showToast('Enter the positive amount the Gang shooter paid.');return;}
       }
-      addAction({type:'gang',player:d.gangPlayer,payer,cents},payer===null?`${name(d.gangPlayer)} declared an unpaid Gang.`:`${name(payer)} paid ${name(d.gangPlayer)} ${money(cents)} for Gang.`);
-      d.gangPayer=null;d.gangAmount='';ui.tab='flower';repaint();return;
+      const feedback=mode==='self'?`${name(d.gangPlayer)} received $0.60 for a self-claimed Gang.`:mode==='shot'?`${name(payer)} paid ${name(d.gangPlayer)} ${money(cents)} for Gang.`:`${name(d.gangPlayer)} declared a Gang without payment.`;
+      addAction({type:'gang',player:d.gangPlayer,mode,payer,cents},feedback);
+      d.gangMode='self';d.gangPayer=null;d.gangAmount='';ui.tab='flower';repaint();return;
     }
     if (action==='draw-confirm') { ui.modal='draw'; repaint(); return; }
     if (action==='confirm-draw') {
@@ -1142,6 +1215,7 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
     else if(field==='gangPayer') ui.draft.gangPayer=t.value===''?null:Number(t.value);
     else if(field==='gangAmount') { ui.draft.gangAmount=t.value; return; }
     else ui.draft[field]=Number(t.value);
+    if(field==='gangPlayer' && ui.draft.gangPayer===ui.draft.gangPlayer) ui.draft.gangPayer=[0,1,2,3].find(i=>i!==ui.draft.gangPlayer);
     repaint();
   });
   root.addEventListener('input', function (event) {
@@ -1150,7 +1224,7 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
       const cents=parseMoneyInput(event.target.value);
       const amount=document.getElementById('gang-shot-amount');
       const description=document.getElementById('gang-shot-note');
-      if(amount) amount.textContent=cents>0?money(cents):'$0.00';
+      if(amount) amount.textContent=cents>0?'+'+money(cents):'$0.00';
       if(description) description.textContent=cents>0?`${name(ui.draft.gangPayer)} pays ${name(ui.draft.gangPlayer)} ${money(cents)}. This counts as one Gang shot.`:'Enter a positive payment amount to count a Gang shot.';
       return;
     }
@@ -1180,7 +1254,7 @@ select:hover, .text-input:hover { border-color: #B68F7C; }
     if (event.key==='Escape' && ui.modal) {ui.modal=null; repaint();}
   });
   // Exposes deterministic, pure calculations for optional automated verification.
-  window.MahjongLedgerLogic={derive,flowerTransfers,winningTransfers,shotStatistics,parseMoneyInput,BASE_CENTS,STARTING_CENTS};
+  window.MahjongLedgerLogic={derive,flowerTransfers,flowerSetTransfers,selfGangTransfers,winningTransfers,shotStatistics,parseMoneyInput,BASE_CENTS,SELF_GANG_CENTS,FLOWER_SET_CENTS,STARTING_CENTS};
   repaint();
 })();
 </script>
